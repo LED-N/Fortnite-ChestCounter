@@ -610,20 +610,17 @@ public abstract class ReplayReader<T> where T : Replay, new()
         {
             info.IsEncrypted = archive.ReadUInt32AsBoolean();
             var size = archive.ReadUInt32();
+            if (size > 32)
+            {
+                throw new InvalidReplayEncryptionKeyException();
+            }
             info.EncryptionKey = archive.ReadBytes(size).ToArray();
         }
 
-        if (!info.IsLive && info.IsEncrypted && (info.EncryptionKey.Length == 0))
+        if (!info.HasValidEncryptionKey)
         {
-            _logger?.LogError("ReadReplayInfo: Completed replay is marked encrypted but has no key!");
-            throw new InvalidReplayException("Completed replay is marked encrypted but has no key!");
-        }
-
-        // ChestCounter patch: Fortnite writes the key from the start, so a replay being recorded can be read.
-        if (info.IsLive && info.IsEncrypted && info.EncryptionKey.Length == 0)
-        {
-            _logger?.LogError("ReadReplayInfo: Replay is marked encrypted but not yet marked as completed!");
-            throw new InvalidReplayException("Replay is marked encrypted but not yet marked as completed!");
+            _logger?.LogError("ReadReplayInfo: Replay has no valid encryption key (live: {isLive}).", info.IsLive);
+            throw new InvalidReplayEncryptionKeyException();
         }
 
         Replay.Info = info;

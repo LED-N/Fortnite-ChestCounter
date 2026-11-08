@@ -116,7 +116,7 @@ public sealed class Tracker
 
         var batch = ready.Count >= 2;
         var profilesBefore = Profiles.List(_data).Count;
-        var bar = batch ? new ProgressBar(L.T("Analyse des replays", "Analyzing replays", "Analizando repeticiones"), ready.Count) : null;
+        var bar = batch ? new ProgressBar(L.T("Analyse des replays", "Analyzing replays", "Analizando repeticiones", "リプレイを解析しています"), ready.Count) : null;
         var outcomes = new List<Outcome>();
         for (var i = 0; i < ready.Count; i++)
         {
@@ -133,8 +133,8 @@ public sealed class Tracker
                 var mb = (file.Length / 1024 / 1024.0).ToString("F1", L.Culture);
                 var justEnded = DateTime.UtcNow - file.LastWriteTimeUtc < TimeSpan.FromMinutes(2);
                 Console.WriteLine(justEnded
-                    ? L.T($"[{DateTime.Now:HH:mm:ss}] Partie terminée : analyse du replay ({mb} Mo)…", $"[{DateTime.Now:HH:mm:ss}] Match over: analyzing the replay ({mb} MB)…", $"[{DateTime.Now:HH:mm:ss}] Partida terminada: analizando la repetición ({mb} MB)…")
-                    : L.T($"[{DateTime.Now:HH:mm:ss}] Analyse de {file.Name} ({mb} Mo)…", $"[{DateTime.Now:HH:mm:ss}] Analyzing {file.Name} ({mb} MB)…", $"[{DateTime.Now:HH:mm:ss}] Analizando {file.Name} ({mb} MB)…"));
+                    ? L.T($"[{DateTime.Now:HH:mm:ss}] Partie terminée : analyse du replay ({mb} Mo)…", $"[{DateTime.Now:HH:mm:ss}] Match over: analyzing the replay ({mb} MB)…", $"[{DateTime.Now:HH:mm:ss}] Partida terminada: analizando la repetición ({mb} MB)…", $"[{DateTime.Now:HH:mm:ss}] 試合が終了しました。リプレイ（{mb} MB）を解析しています…")
+                    : L.T($"[{DateTime.Now:HH:mm:ss}] Analyse de {file.Name} ({mb} Mo)…", $"[{DateTime.Now:HH:mm:ss}] Analyzing {file.Name} ({mb} MB)…", $"[{DateTime.Now:HH:mm:ss}] Analizando {file.Name} ({mb} MB)…", $"[{DateTime.Now:HH:mm:ss}] {file.Name}（{mb} MB）を解析しています…"));
                 Console.ResetColor();
             }
 
@@ -179,6 +179,14 @@ public sealed class Tracker
             return quietFor > AbandonedLiveAge;
         }
 
+        // A completed flag can be written before the real key. Give it a minute to finalize;
+        // afterwards Process records a clear missing-key outcome rather than attempting AES.
+        if (live == false && ReplayHeaderProbe.KeyMissing(file.FullName))
+        {
+            IsFinishing = true;
+            return quietFor > OldReplayAge;
+        }
+
         if (live == false && (ignoreQuietPeriod || quietFor > OldReplayAge))
         {
             return true;
@@ -208,15 +216,12 @@ public sealed class Tracker
     {
         var key = FileKey(file);
 
-        // Recording cut in the middle of the match: Fortnite never wrote the decryption key, nothing can be read.
-        // Without this, the replay would stay "pending" forever (no auto update, auto close delayed every time).
-        if (ReplayHeaderProbe.IsLive(file.FullName) == true && ReplayHeaderProbe.KeyMissing(file.FullName))
+        // Even a recording marked complete may still contain a zero-filled placeholder key.
+        if (ReplayHeaderProbe.KeyMissing(file.FullName))
         {
-            _data.ProcessedFiles[key] = "incomplete";
+            _data.ProcessedFiles[key] = "missing-key";
             _store.SaveData(_data);
-            return new Outcome(Skipped: L.T("replay incomplet (Fortnite s'est fermé pendant la partie) : cette partie ne peut pas être comptée",
-                "incomplete replay (Fortnite closed during the match): this match cannot be counted",
-                "repetición incompleta (Fortnite se cerró durante la partida): esta partida no se puede contar"));
+            return new Outcome(Skipped: MissingKeyMessage());
         }
 
         MatchRecord record;
@@ -226,6 +231,15 @@ public sealed class Tracker
         }
         catch (Exception ex)
         {
+            // The key can change between the readiness probe and the snapshot read by Analyze.
+            if (ex is Unreal.Core.Exceptions.InvalidReplayEncryptionKeyException)
+            {
+                HasPending = true;
+                return new Outcome(Skipped: L.T("clé de déchiffrement pas encore disponible, nouvelle tentative au prochain contrôle",
+                    "decryption key is not available yet; retrying on the next scan",
+                    "la clave de descifrado aún no está disponible; se reintentará en la próxima comprobación",
+                    "復号鍵がまだ利用できません。次回の確認時に再試行します"));
+            }
             var message = (ex as AggregateException)?.InnerException?.Message ?? ex.Message;
             ErrorLog.Write($"Unreadable replay: {file.FullName} ({file.Length} bytes, {file.LastWriteTime:yyyy-MM-dd HH:mm:ss})", ex);
             _data.ProcessedFiles[key] = "error: " + message;
@@ -241,7 +255,7 @@ public sealed class Tracker
             _data.Matches.RemoveAll(m => m.SessionId == record.SessionId);
             _data.ProcessedFiles[key] = "autre mode";
             _store.SaveData(_data);
-            return new Outcome(Skipped: L.T("pas une partie Battle Royale (créatif / autre mode)", "not a Battle Royale match (Creative / other mode)", "no es una partida de Battle Royale (Creativo / otro modo)"));
+            return new Outcome(Skipped: L.T("pas une partie Battle Royale (créatif / autre mode)", "not a Battle Royale match (Creative / other mode)", "no es una partida de Battle Royale (Creativo / otro modo)", "バトルロイヤルの試合ではありません（クリエイティブ・その他のモード）"));
         }
 
         var existing = _data.Matches.FirstOrDefault(m => m.SessionId == record.SessionId);
@@ -249,7 +263,7 @@ public sealed class Tracker
         {
             _data.ProcessedFiles[key] = record.SessionId;
             _store.SaveData(_data);
-            return new Outcome(Skipped: L.T("partie déjà comptée (même partie, fichier renommé)", "match already counted (same match, renamed file)", "partida ya contada (misma partida, archivo renombrado)"));
+            return new Outcome(Skipped: L.T("partie déjà comptée (même partie, fichier renommé)", "match already counted (same match, renamed file)", "partida ya contada (misma partida, archivo renombrado)", "集計済みの試合です（同じ試合のファイル名が変更されています）"));
         }
 
         if (existing != null)
@@ -278,19 +292,25 @@ public sealed class Tracker
         return new Outcome(record, Updated: existing != null, NewPrizeIds: newIds);
     }
 
+    private static string MissingKeyMessage() => L.T(
+        "clé de déchiffrement absente ou invalide (vide ou composée de zéros) : ce replay ne peut pas être analysé",
+        "decryption key is missing or invalid (empty or all zeros): this replay cannot be analyzed",
+        "la clave de descifrado falta o no es válida (vacía o llena de ceros): no se puede analizar esta repetición",
+        "復号鍵が未保存または無効（空・すべてゼロなど）のため、このリプレイは解析できません");
+
     private void PrintOutcome(Outcome o)
     {
         if (o.Error != null)
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine(L.T($"   Impossible de lire ce replay : {o.Error}", $"   Cannot read this replay: {o.Error}", $"   No se puede leer esta repetición: {o.Error}"));
+            Console.WriteLine(L.T($"   Impossible de lire ce replay : {o.Error}", $"   Cannot read this replay: {o.Error}", $"   No se puede leer esta repetición: {o.Error}", $"   このリプレイを読み込めません: {o.Error}"));
             Console.ResetColor();
             PrintErrorLogHint();
             return;
         }
         if (o.Skipped != null)
         {
-            Console.WriteLine($"   {L.T("Ignoré", "Skipped", "Ignorada")} : {o.Skipped}.");
+            Console.WriteLine($"   {L.T("Ignoré", "Skipped", "Ignorada", "スキップ")} : {o.Skipped}.");
             return;
         }
 
@@ -300,10 +320,10 @@ public sealed class Tracker
         if (current != null && Profiles.Key(m) != current.Key)
         {
             Console.ForegroundColor = ConsoleColor.DarkYellow;
-            var name = m.PlayerName ?? L.T("compte inconnu", "unknown account", "cuenta desconocida");
+            var name = m.PlayerName ?? L.T("compte inconnu", "unknown account", "cuenta desconocida", "不明なアカウント");
             Console.WriteLine(L.T($"   Partie jouée sur un autre compte ({name}) : elle compte pour son propre profil. Profil affiché : {current.Name}. Touche P pour changer.",
                 $"   Match played on another account ({name}): it counts for its own profile. Profile shown: {current.Name}. Press P to switch.",
-                $"   Partida jugada con otra cuenta ({name}): cuenta para su propio perfil. Perfil mostrado: {current.Name}. Pulsa P para cambiar."));
+                $"   Partida jugada con otra cuenta ({name}): cuenta para su propio perfil. Perfil mostrado: {current.Name}. Pulsa P para cambiar.", $"   別のアカウント（{name}）の試合です。そのアカウントのプロフィールに集計されます。表示中: {current.Name}。Pキーで切り替えられます。"));
             Console.ResetColor();
         }
         PrintNewPrizeIds(o.NewPrizeIds);
@@ -318,7 +338,7 @@ public sealed class Tracker
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine(L.T($"   Trésor(s) à nommer dans {_store.PrizeNamesPath} : {string.Join(", ", ids)}",
                 $"   Treasure(s) to name in {_store.PrizeNamesPath}: {string.Join(", ", ids)}",
-                $"   Tesoro(s) por nombrar en {_store.PrizeNamesPath}: {string.Join(", ", ids)}"));
+                $"   Tesoro(s) por nombrar en {_store.PrizeNamesPath}: {string.Join(", ", ids)}", $"   {_store.PrizeNamesPath} で名前を設定できるお宝: {string.Join(", ", ids)}"));
             Console.ResetColor();
         }
     }
@@ -328,7 +348,7 @@ public sealed class Tracker
         Console.ForegroundColor = ConsoleColor.DarkGray;
         Console.WriteLine(L.T($"   Détails dans {_store.ErrorLogPath}. Souvent dû à une mise à jour de Fortnite : signale-le sur {AppInfo.IssuesUrl}",
             $"   Details in {_store.ErrorLogPath}. Usually caused by a Fortnite update: report it at {AppInfo.IssuesUrl}",
-            $"   Detalles en {_store.ErrorLogPath}. Suele deberse a una actualización de Fortnite: avísalo en {AppInfo.IssuesUrl}"));
+            $"   Detalles en {_store.ErrorLogPath}. Suele deberse a una actualización de Fortnite: avísalo en {AppInfo.IssuesUrl}", $"   詳細: {_store.ErrorLogPath}。Fortniteの更新が原因の場合があります。報告先: {AppInfo.IssuesUrl}"));
         Console.ResetColor();
     }
 
@@ -339,29 +359,33 @@ public sealed class Tracker
         var errors = outcomes.Where(o => o.Error != null).Select(o => o.Error!).ToList();
 
         Console.ForegroundColor = ConsoleColor.Green;
-        Console.Write($"  ✔ {L.Count(outcomes.Count, "replay analysé", "replays analysés", "replay analyzed", "replays analyzed", "repetición analizada", "repeticiones analizadas")}");
+        Console.Write($"  ✔ {L.Count(outcomes.Count, "replay analysé", "replays analysés", "replay analyzed", "replays analyzed", "repetición analizada", "repeticiones analizadas", "件のリプレイを解析")}");
         Console.ResetColor();
-        Console.Write(L.T(" : ", ": ", ": "));
+        Console.Write(L.T(" : ", ": ", ": ", ": "));
         Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.Write($"{L.Count(matches.Count, "partie", "parties", "match", "matches", "partida", "partidas")}, {L.Count(matches.Sum(m => m.ChestsOpened), "coffre", "chest", "cofre")}");
+        Console.Write($"{L.Count(matches.Count, "partie", "parties", "match", "matches", "partida", "partidas", "試合")}, {L.Count(matches.Sum(m => m.ChestsOpened), "coffre", "chest", "cofre", "個の宝箱")}");
         var treasures = matches.Sum(m => m.TreasureFinds.Count);
         if (treasures > 0)
         {
             Console.ForegroundColor = ConsoleColor.Magenta;
-            Console.Write($", ★ {L.Count(treasures, "trésor", "treasure", "tesoro")}");
+            Console.Write($", ★ {L.Count(treasures, "trésor", "treasure", "tesoro", "個のお宝")}");
         }
         Console.ResetColor();
         Console.WriteLine();
         if (skipped > 0)
         {
             Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine(L.T($"    {skipped} ignoré(s) : modes créatifs, parties déjà comptées ou replays incomplets.", $"    {skipped} skipped: Creative modes, matches already counted or incomplete replays.", $"    {skipped} ignorada(s): modos creativos, partidas ya contadas o repeticiones incompletas."));
+            Console.WriteLine(L.T($"    {skipped} ignoré(s) : modes créatifs, parties déjà comptées ou replays incomplets.", $"    {skipped} skipped: Creative modes, matches already counted or incomplete replays.", $"    {skipped} ignorada(s): modos creativos, partidas ya contadas o repeticiones incompletas.", $"    {skipped}件をスキップしました: クリエイティブ、集計済みの試合、不完全なリプレイなど。"));
+            foreach (var reason in outcomes.Where(o => o.Skipped != null).Select(o => o.Skipped!).Distinct())
+            {
+                Console.WriteLine($"      {reason}");
+            }
             Console.ResetColor();
         }
         if (errors.Count > 0)
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine(L.T($"    {errors.Count} replay(s) illisible(s) :", $"    {errors.Count} unreadable replay(s):", $"    {errors.Count} repetición(es) ilegible(s):"));
+            Console.WriteLine(L.T($"    {errors.Count} replay(s) illisible(s) :", $"    {errors.Count} unreadable replay(s):", $"    {errors.Count} repetición(es) ilegible(s):", $"    読み込めないリプレイが{errors.Count}件あります:"));
             foreach (var e in errors.Take(5))
             {
                 Console.WriteLine($"      {e}");
@@ -405,7 +429,7 @@ public sealed class Tracker
         worker.Start();
         if (!worker.Join(timeout))
         {
-            throw new TimeoutException(L.T("analyse trop longue", "analysis took too long", "análisis demasiado largo"));
+            throw new TimeoutException(L.T("analyse trop longue", "analysis took too long", "análisis demasiado largo", "解析が制限時間を超えました"));
         }
         bytes = Array.Empty<byte>();
         ReleaseMemory();
@@ -465,7 +489,7 @@ public sealed class Tracker
             _liveFile = file.FullName;
             started = true;
             Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine(L.T($"[{DateTime.Now:HH:mm:ss}] Partie en cours… (ses coffres seront comptés à la fin)", $"[{DateTime.Now:HH:mm:ss}] Match in progress… (its chests will be counted at the end)", $"[{DateTime.Now:HH:mm:ss}] Partida en curso… (sus cofres se contarán al final)"));
+            Console.WriteLine(L.T($"[{DateTime.Now:HH:mm:ss}] Partie en cours… (ses coffres seront comptés à la fin)", $"[{DateTime.Now:HH:mm:ss}] Match in progress… (its chests will be counted at the end)", $"[{DateTime.Now:HH:mm:ss}] Partida en curso… (sus cofres se contarán al final)", $"[{DateTime.Now:HH:mm:ss}] 試合中…（終了後に宝箱を集計します）"));
             Console.ResetColor();
         }
 
@@ -505,8 +529,8 @@ public sealed class Tracker
         if (changed && LiveMatch != null)
         {
             Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {L.T("Partie en cours", "Match in progress", "Partida en curso")}: {L.Count(LiveMatch.ChestsOpened, "coffre", "chest", "cofre")}"
-                + (LiveMatch.TreasureFinds.Count > 0 ? $", {L.Count(LiveMatch.TreasureFinds.Count, "trésor", "treasure", "tesoro")}" : ""));
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {L.T("Partie en cours", "Match in progress", "Partida en curso", "試合中")}: {L.Count(LiveMatch.ChestsOpened, "coffre", "chest", "cofre", "個の宝箱")}"
+                + (LiveMatch.TreasureFinds.Count > 0 ? $", {L.Count(LiveMatch.TreasureFinds.Count, "trésor", "treasure", "tesoro", "個のお宝")}" : ""));
             Console.ResetColor();
         }
         return changed || started;
@@ -539,26 +563,26 @@ public sealed class Tracker
         var when = (m.MatchStartUtc ?? m.AnalyzedAtUtc).ToLocalTime();
 
         Console.ForegroundColor = ConsoleColor.Green;
-        Console.Write($"   {(updated ? "↻" : "✔")} {L.T("Partie du", "Match of", "Partida del")} {L.DateTimeShort(when)}");
+        Console.Write($"   {(updated ? "↻" : "✔")} {L.T("Partie du", "Match of", "Partida del", "試合日時:")} {L.DateTimeShort(when)}");
         Console.ResetColor();
-        Console.Write($" ({Pretty.Playlist(m.Playlist)}, {Pretty.Placement(m)}){L.T(" : ", ": ", ": ")}");
+        Console.Write($" ({Pretty.Playlist(m.Playlist)}, {Pretty.Placement(m)}){L.T(" : ", ": ", ": ", ": ")}");
         Console.ForegroundColor = ConsoleColor.Yellow;
         var destroyed = m.Chests.Count(c => c.Destroyed);
-        Console.Write(L.Count(m.ChestsOpened, "coffre", "chest", "cofre")
-            + (destroyed > 0 ? L.T($" (dont {L.Count(destroyed, "détruit", "", "")})", $" ({destroyed} destroyed)", $" ({L.Count(destroyed, "", "", "destruido")})") : ""));
+        Console.Write(L.Count(m.ChestsOpened, "coffre", "chest", "cofre", "個の宝箱")
+            + (destroyed > 0 ? L.T($" (dont {L.Count(destroyed, "détruit", "", "", "個を破壊")})", $" ({destroyed} destroyed)", $" ({L.Count(destroyed, "", "", "destruido", "個を破壊")})", $" （うち{destroyed}個を破壊）") : ""));
         Console.ResetColor();
-        Console.WriteLine($"  →  total{L.T(" : ", ": ", ": ")}{L.N(total)}");
+        Console.WriteLine($"  →  {L.T("total", "total", "total", "合計")}{L.T(" : ", ": ", ": ", ": ")}{L.N(total)}");
 
         foreach (var find in m.TreasureFinds)
         {
             Console.ForegroundColor = find.FromGoldenChest ? ConsoleColor.Yellow : ConsoleColor.Magenta;
-            Console.WriteLine($"   {(find.FromGoldenChest ? "★★" : "★")} {L.T("Trésor obtenu : ", "Treasure obtained: ", "Tesoro obtenido: ")}{find.DisplayName} ({Pretty.Obtained(find)})");
+            Console.WriteLine($"   {(find.FromGoldenChest ? "★★" : "★")} {L.T("Trésor obtenu : ", "Treasure obtained: ", "Tesoro obtenido: ", "獲得したお宝: ")}{find.DisplayName} ({Pretty.Obtained(find)})");
             if (!find.SourceIsChest)
             {
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.WriteLine(L.T($"   ⚑ Source inhabituelle : {find.SourceLabel}{(find.SourceCertain ? "" : " (probable)")} [{find.SourceBlueprint}] → noté dans le rapport",
                     $"   ⚑ Unusual source: {find.SourceLabel}{(find.SourceCertain ? "" : " (likely)")} [{find.SourceBlueprint}] → noted in the report",
-                    $"   ⚑ Origen inusual: {find.SourceLabel}{(find.SourceCertain ? "" : " (probable)")} [{find.SourceBlueprint}] → anotado en el informe"));
+                    $"   ⚑ Origen inusual: {find.SourceLabel}{(find.SourceCertain ? "" : " (probable)")} [{find.SourceBlueprint}] → anotado en el informe", $"   ⚑ 通常と異なる入手元: {find.SourceLabel}{(find.SourceCertain ? "" : " （推定）")} [{find.SourceBlueprint}] → レポートに記録しました"));
             }
             Console.ResetColor();
         }
@@ -578,11 +602,11 @@ public sealed class Tracker
         }
         sb.Append(L.T($"Parties : {L.N(matches.Count)}   |   Coffres : {L.N(chests)}   |   Trésors : {L.N(treasures)}",
             $"Matches: {L.N(matches.Count)}   |   Chests: {L.N(chests)}   |   Treasures: {L.N(treasures)}",
-            $"Partidas: {L.N(matches.Count)}   |   Cofres: {L.N(chests)}   |   Tesoros: {L.N(treasures)}"));
+            $"Partidas: {L.N(matches.Count)}   |   Cofres: {L.N(chests)}   |   Tesoros: {L.N(treasures)}", $"試合: {L.N(matches.Count)}   |   宝箱: {L.N(chests)}   |   お宝: {L.N(treasures)}"));
         if (matches.Count > 0)
         {
             var avg = ((double)chests / matches.Count).ToString("F1", L.Culture);
-            sb.Append(L.T($"   |   Moyenne : {avg} / partie", $"   |   Average: {avg} / match", $"   |   Media: {avg} / partida"));
+            sb.Append(L.T($"   |   Moyenne : {avg} / partie", $"   |   Average: {avg} / match", $"   |   Media: {avg} / partida", $"   |   平均: 1試合あたり{avg}個"));
         }
 
         Console.ForegroundColor = ConsoleColor.Cyan;
@@ -608,6 +632,7 @@ public static class ReplayHeaderProbe
             using var br = new BinaryReader(fs);
             if (br.ReadUInt32() != FileMagic) return true;
             var fileVersion = br.ReadUInt32();
+            if (fileVersion < 6) return false; // versions before encryption have no key
             if (fileVersion >= 7)
             {
                 var count = br.ReadInt32();
@@ -622,8 +647,9 @@ public static class ReplayHeaderProbe
             br.ReadUInt32(); // compressed
             if (br.ReadUInt32() == 0) return false; // not encrypted
             var keyLen = br.ReadInt32();
-            if (keyLen <= 0 || keyLen > 256) return true;
-            return br.ReadBytes(keyLen).All(b => b == 0);
+            if (keyLen is not (16 or 24 or 32)) return true;
+            var key = br.ReadBytes(keyLen);
+            return key.Length != keyLen || key.All(b => b == 0);
         }
         catch
         {

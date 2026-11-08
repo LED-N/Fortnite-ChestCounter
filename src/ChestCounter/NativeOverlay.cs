@@ -28,8 +28,8 @@ public static class NativeOverlay
     private static int _headerH, _bigH, _captionH, _rowH, _col1W, _col2W, _labelW;
     private static IntPtr _fontHeader, _fontCaption, _fontLabel;
     private static IntPtr _brushBorder, _brushLine;
-    private static string Header => L.T("COFFRES", "CHESTS", "COFRES");
-    private const string CaptionTotal = "total";
+    private static string Header => L.T("COFFRES", "CHESTS", "COFRES", "宝箱");
+    private static string CaptionTotal => L.T("total", "total", "total", "合計");
     private static Action<int, int>? _onMoved;
     private static Action<bool>? _onLockChanged;
     private static volatile bool _locked;
@@ -90,7 +90,7 @@ public static class NativeOverlay
             }
             catch (Exception ex)
             {
-                Console.WriteLine(L.T($"Overlay indisponible : {ex.Message}", $"Overlay unavailable: {ex.Message}", $"Overlay no disponible: {ex.Message}"));
+                Console.WriteLine(L.T($"Overlay indisponible : {ex.Message}", $"Overlay unavailable: {ex.Message}", $"Overlay no disponible: {ex.Message}", $"オーバーレイを表示できません：{ex.Message}"));
                 ready.Set();
             }
         })
@@ -191,7 +191,7 @@ public static class NativeOverlay
         _hwnd = CreateWindowExW(
             // Opaque (no WS_EX_LAYERED alpha): nothing for the compositor to blend every frame.
             WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
-            wc.lpszClassName, L.T("Coffres", "Chests", "Cofres"), WS_POPUP,
+            wc.lpszClassName, L.T("Coffres", "Chests", "Cofres", "宝箱"), WS_POPUP,
 
             posX, posY, w, h, IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
         if (_hwnd == IntPtr.Zero)
@@ -225,11 +225,12 @@ public static class NativeOverlay
         }
         _scale = _dpiScale * _sizePercent / 100f;
         int S(int v) => (int)Math.Round(v * _scale);
-        _fontBig = CreateFontW(-S(38), 0, 0, 0, 800, 0, 0, 0, 1, 0, 0, 5, 0, "Segoe UI");
-        _fontSmall = CreateFontW(-S(14), 0, 0, 0, 500, 0, 0, 0, 1, 0, 0, 5, 0, "Segoe UI");
-        _fontHeader = CreateFontW(-S(12), 0, 0, 0, 700, 0, 0, 0, 1, 0, 0, 5, 0, "Segoe UI");
-        _fontCaption = CreateFontW(-S(11), 0, 0, 0, 600, 0, 0, 0, 1, 0, 0, 5, 0, "Segoe UI");
-        _fontLabel = CreateFontW(-S(13), 0, 0, 0, 600, 0, 0, 0, 1, 0, 0, 5, 0, "Segoe UI");
+        var face = L.Ja ? "Yu Gothic UI" : "Segoe UI";
+        _fontBig = CreateFontW(-S(38), 0, 0, 0, 800, 0, 0, 0, 1, 0, 0, 5, 0, face);
+        _fontSmall = CreateFontW(-S(14), 0, 0, 0, 500, 0, 0, 0, 1, 0, 0, 5, 0, face);
+        _fontHeader = CreateFontW(-S(12), 0, 0, 0, 700, 0, 0, 0, 1, 0, 0, 5, 0, face);
+        _fontCaption = CreateFontW(-S(11), 0, 0, 0, 600, 0, 0, 0, 1, 0, 0, 5, 0, face);
+        _fontLabel = CreateFontW(-S(13), 0, 0, 0, 600, 0, 0, 0, 1, 0, 0, 5, 0, face);
         _fontIcon = CreateFontW(-S(14), 0, 0, 0, 400, 0, 0, 0, 1, 0, 0, 5, 0, "Segoe MDL2 Assets");
     }
 
@@ -344,10 +345,12 @@ public static class NativeOverlay
             Console.WriteLine(locked
                 ? L.T($"Overlay verrouillé : la souris passe au travers. {(LockHotkeyRegistered ? "Ctrl+Maj+L" : "Touche L dans cette fenêtre")} pour le déverrouiller.",
                       $"Overlay locked: the mouse goes through it. {(LockHotkeyRegistered ? "Ctrl+Shift+L" : "L key in this window")} to unlock it.",
-                      $"Overlay bloqueado: el ratón lo atraviesa. {(LockHotkeyRegistered ? "Ctrl+Mayús+L" : "Tecla L en esta ventana")} para desbloquearlo.")
+                      $"Overlay bloqueado: el ratón lo atraviesa. {(LockHotkeyRegistered ? "Ctrl+Mayús+L" : "Tecla L en esta ventana")} para desbloquearlo.",
+                      $"オーバーレイをロックしました。マウス操作は背後に届きます。{(LockHotkeyRegistered ? "Ctrl+Shift+L" : "このウィンドウで L キー")}で解除します。")
                 : L.T("Overlay déverrouillé : clic gauche maintenu pour le déplacer, cadenas pour le reverrouiller.",
                       "Overlay unlocked: hold the left mouse button to move it, click the padlock to lock it again.",
-                      "Overlay desbloqueado: arrástralo con el clic izquierdo; el candado lo vuelve a bloquear."));
+                      "Overlay desbloqueado: arrástralo con el clic izquierdo; el candado lo vuelve a bloquear.",
+                      "オーバーレイのロックを解除しました。左ドラッグで移動し、鍵アイコンで再ロックします。"));
         }
     }
 
@@ -362,8 +365,8 @@ public static class NativeOverlay
         {
             ShowWindow(hwnd, SW_HIDE);
             Console.WriteLine(HotkeyRegistered
-                ? L.T("Overlay masqué : Ctrl+Maj+O (n'importe où) pour le réafficher.", "Overlay hidden: Ctrl+Shift+O (anywhere) to show it again.", "Overlay oculto: Ctrl+Mayús+O (desde cualquier sitio) para volver a mostrarlo.")
-                : L.T("Overlay masqué : touche O dans cette fenêtre pour le réafficher.", "Overlay hidden: O key in this window to show it again.", "Overlay oculto: tecla O en esta ventana para volver a mostrarlo."));
+                ? L.T("Overlay masqué : Ctrl+Maj+O (n'importe où) pour le réafficher.", "Overlay hidden: Ctrl+Shift+O (anywhere) to show it again.", "Overlay oculto: Ctrl+Mayús+O (desde cualquier sitio) para volver a mostrarlo.", "オーバーレイを非表示にしました。Ctrl+Shift+O で再表示します。")
+                : L.T("Overlay masqué : touche O dans cette fenêtre pour le réafficher.", "Overlay hidden: O key in this window to show it again.", "Overlay oculto: tecla O en esta ventana para volver a mostrarlo.", "オーバーレイを非表示にしました。このウィンドウで O キーを押すと再表示します。"));
         }
     }
 
@@ -389,6 +392,8 @@ public static class NativeOverlay
 
             // Two counters side by side.
             _col1W = Math.Max(TextWidth(hdc, _fontBig, v.Total, out _bigH), TextWidth(hdc, _fontCaption, CaptionTotal, out _captionH));
+            TextWidth(hdc, _fontCaption, v.CurrentCaption, out var currentCaptionH);
+            _captionH = Math.Max(_captionH, currentCaptionH);
             _col2W = Math.Max(TextWidth(hdc, _fontBig, v.Current ?? "—", out _), Math.Max(TextWidth(hdc, _fontCaption, v.CurrentCaption, out _), TextWidth(hdc, _fontCaption, OverlayModel.LastMatchCaption, out _)));
             var countersW = _col1W + S(ColGap) + _col2W;
 

@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Text;
+
 namespace ChestCounter;
 
 /// <summary>
@@ -12,11 +15,11 @@ public static class ConsoleUi
     /// <summary>True when keys can be read and the cursor moved.</summary>
     public static bool Interactive { get; } = !Console.IsInputRedirected && !Console.IsOutputRedirected;
 
-    private static int Width
+    internal static int Width
     {
         get
         {
-            try { return Math.Max(40, Console.WindowWidth); } catch { return 80; }
+            try { return Console.WindowWidth > 0 ? Console.WindowWidth : 80; } catch { return 80; }
         }
     }
 
@@ -29,17 +32,18 @@ public static class ConsoleUi
         }
         Console.WriteLine();
         Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.Write($"  {title}");
+        var stepText = step == null ? "" : ConsoleColumns.Truncate($"   {step}", Math.Max(0, Width - 3));
+        Console.Write(ConsoleColumns.Truncate($"  {title}", Math.Max(0, Width - 1 - ConsoleColumns.Width(stepText))));
         Console.ResetColor();
         if (step != null)
         {
             Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.Write($"   {step}");
+            Console.Write(stepText);
             Console.ResetColor();
         }
         Console.WriteLine();
         Console.ForegroundColor = ConsoleColor.DarkGray;
-        Console.WriteLine("  " + new string('─', Math.Min(Width - 4, 72)));
+        Console.WriteLine("  " + new string('─', Math.Clamp(Width - 4, 0, 72)));
         Console.ResetColor();
         Console.WriteLine();
     }
@@ -61,6 +65,13 @@ public static class ConsoleUi
     }
 
     public static void Hint(string text) => Text(text, ConsoleColor.DarkGray);
+
+    internal static string FormatMenuLine(string option, bool selected, int width)
+    {
+        var room = Math.Max(0, width - 1);
+        var line = ConsoleColumns.Truncate($"  {(selected ? "›" : " ")} {option}", room);
+        return line + new string(' ', room - ConsoleColumns.Width(line));
+    }
 
     /// <summary>
     /// Arrow-key menu (↑ ↓ then Enter; digits also work). Returns the chosen index.
@@ -84,7 +95,7 @@ public static class ConsoleUi
                 Console.SetCursorPosition(0, top);
                 for (var i = 0; i < options.Count; i++)
                 {
-                    var line = $"  {(i == selected ? "›" : " ")} {options[i]}";
+                    var line = FormatMenuLine(options[i], i == selected, Width);
                     if (i == selected)
                     {
                         Console.ForegroundColor = ConsoleColor.Black;
@@ -92,11 +103,11 @@ public static class ConsoleUi
                     }
                     Console.Write(line);
                     Console.ResetColor();
-                    Console.WriteLine(new string(' ', Math.Max(0, Width - line.Length - 1)));
+                    Console.WriteLine();
                 }
                 Console.WriteLine();
                 Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.Write("  " + (help ?? L.T("↑ ↓ pour choisir, Entrée pour valider", "↑ ↓ to choose, Enter to confirm", "↑ ↓ para elegir, Intro para confirmar")));
+                Console.Write(ConsoleColumns.Truncate("  " + (help ?? L.T("↑ ↓ pour choisir, Entrée pour valider", "↑ ↓ to choose, Enter to confirm", "↑ ↓ para elegir, Intro para confirmar", "↑ ↓で選択、Enterで決定")), Math.Max(0, Width - 1)));
                 Console.ResetColor();
 
                 var key = ReadKey();
@@ -168,39 +179,53 @@ public sealed class ProgressBar
 
     public void Update(int done, string? detail = null)
     {
-        const int barWidth = 28;
-        var filled = (int)Math.Round(barWidth * Math.Clamp(done, 0, _total) / (double)_total);
-        var bar = new string('█', filled) + new string('░', barWidth - filled);
-        var count = $"{done} / {_total}";
         if (!ConsoleUi.Interactive)
         {
             return; // no redraw possible: the summary line at the end is enough
         }
 
-        int width;
-        try { width = Console.WindowWidth; } catch { width = 80; }
-        var text = $"  {_label}  {bar}  {count}";
-        if (!string.IsNullOrEmpty(detail))
-        {
-            var room = width - text.Length - 4;
-            if (room > 8)
-            {
-                text += "  " + (detail.Length > room ? "…" + detail[^(room - 1)..] : detail);
-            }
-        }
+        var width = Math.Max(0, ConsoleUi.Width - 1);
+        var (prefix, bar, suffix) = FormatParts(_label, done, _total, detail, width);
         Console.Write("\r");
         Console.ForegroundColor = ConsoleColor.Cyan;
-        Console.Write($"  {_label}  ");
+        Console.Write(prefix);
         Console.ForegroundColor = ConsoleColor.Yellow;
         Console.Write(bar);
         Console.ForegroundColor = ConsoleColor.Gray;
-        Console.Write(text[(4 + _label.Length + bar.Length)..]);
+        Console.Write(suffix);
         Console.ResetColor();
-        if (text.Length < _lastLength)
+        var columns = ConsoleColumns.Width(prefix + bar + suffix);
+        if (columns < _lastLength)
         {
-            Console.Write(new string(' ', _lastLength - text.Length));
+            Console.Write(new string(' ', Math.Min(width, _lastLength) - columns));
         }
-        _lastLength = text.Length;
+        _lastLength = columns;
+    }
+
+    internal static (string Prefix, string Bar, string Suffix) FormatParts(string label, int done, int total, string? detail, int width)
+    {
+        const int barWidth = 28;
+        var filled = (int)Math.Round(barWidth * Math.Clamp(done, 0, total) / (double)total);
+        var bar = new string('█', filled) + new string('░', barWidth - filled);
+        var count = $"{done} / {total}";
+        var prefix = ConsoleColumns.Truncate($"  {label}  ", Math.Max(0, width - barWidth - count.Length - 2));
+        var text = prefix + bar + $"  {count}";
+        if (!string.IsNullOrEmpty(detail))
+        {
+            var room = width - ConsoleColumns.Width(text) - 2;
+            if (room > 8)
+            {
+                text += "  " + ConsoleColumns.Truncate(detail, room, true);
+            }
+        }
+        text = ConsoleColumns.Truncate(text, width);
+        // Extremely narrow windows have no room for the full bar; the clipped line still stays on one row.
+        if (ConsoleColumns.Width(prefix + bar + $"  {count}") > width)
+        {
+            prefix = "";
+            bar = "";
+        }
+        return (prefix, bar, text[(prefix.Length + bar.Length)..]);
     }
 
     /// <summary>Erases the bar so the summary can be written on the same line.</summary>
@@ -210,7 +235,59 @@ public sealed class ProgressBar
         {
             return;
         }
-        Console.Write("\r" + new string(' ', _lastLength) + "\r");
+        Console.Write("\r" + new string(' ', Math.Min(_lastLength, Math.Max(0, ConsoleUi.Width - 1))) + "\r");
         _lastLength = 0;
+    }
+}
+
+/// <summary>Terminal columns: wide CJK and emoji use two cells; combining sequences stay intact.</summary>
+internal static class ConsoleColumns
+{
+    public static int Width(string text) => Elements(text).Sum(element => ElementWidth(element));
+
+    public static string Truncate(string text, int columns, bool tail = false)
+    {
+        if (columns <= 0) return "";
+        text = text.Replace('\r', ' ').Replace('\n', ' ').Replace('\t', ' ');
+        var elements = Elements(text).ToList();
+        if (elements.Sum(ElementWidth) <= columns) return text;
+        var selected = new List<string>();
+        var used = 1; // ellipsis
+        foreach (var element in tail ? elements.AsEnumerable().Reverse() : elements)
+        {
+            var width = ElementWidth(element);
+            if (used + width > columns) break;
+            selected.Add(element);
+            used += width;
+        }
+        if (tail) selected.Reverse();
+        return tail ? "…" + string.Concat(selected) : string.Concat(selected) + "…";
+    }
+
+    private static IEnumerable<string> Elements(string text)
+    {
+        var enumerator = StringInfo.GetTextElementEnumerator(text);
+        while (enumerator.MoveNext()) yield return enumerator.GetTextElement();
+    }
+
+    private static int ElementWidth(string element)
+    {
+        var width = 0;
+        var emojiPresentation = false;
+        foreach (var rune in element.EnumerateRunes())
+        {
+            var value = rune.Value;
+            if (value is 0xFE0F or 0x20E3) emojiPresentation = true;
+            if (Rune.GetUnicodeCategory(rune) is UnicodeCategory.NonSpacingMark or UnicodeCategory.SpacingCombiningMark
+                or UnicodeCategory.EnclosingMark or UnicodeCategory.Format or UnicodeCategory.Control) continue;
+            var wide = value is >= 0x1100 and <= 0x115F or 0x2329 or 0x232A
+                or >= 0x2E80 and <= 0xA4CF or >= 0xAC00 and <= 0xD7A3
+                or >= 0xF900 and <= 0xFAFF or >= 0xFE10 and <= 0xFE19
+                or >= 0xFE30 and <= 0xFE6F or >= 0xFF01 and <= 0xFF60
+                or >= 0xFFE0 and <= 0xFFE6 or >= 0x1B000 and <= 0x1B2FF
+                or >= 0x1F1E6 and <= 0x1FAFF or >= 0x20000 and <= 0x3FFFD;
+            width = Math.Max(width, wide ? 2 : 1);
+        }
+        return emojiPresentation && width > 0 ? 2 : width;
     }
 }
