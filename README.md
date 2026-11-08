@@ -22,9 +22,9 @@ Chest Counter reads the replays Fortnite saves after each match and keeps a runn
 
 ## How it works (and why it is safe)
 
-Fortnite can record a **replay file** of every match on your PC. Chest Counter reads these files once the match is over, and nothing else.
+Fortnite can record a **replay file** of every match on your PC. Chest Counter reads these files once the match is over.
 
-- ✅ **Only reads replay files**: the `.replay` files Fortnite writes to `%LOCALAPPDATA%\FortniteGame\Saved\Demos`. They are opened read-only and never modified.
+- ✅ **Only reads replay files**: the `.replay` files Fortnite writes to `%LOCALAPPDATA%\FortniteGame\Saved\Demos`. They are opened read-only for analysis.
 - ✅ **No game modification**: nothing in the Fortnite installation folder is touched, no file is added or patched.
 - ✅ **No access to the game's memory**: the tool never reads, writes or injects anything into the Fortnite process. It does not interact with the running game at all.
 - ✅ **No data sent anywhere**: no login, no Epic account access, no telemetry. The only network access is the check for a new version on GitHub, which can be turned off in the settings.
@@ -34,6 +34,14 @@ Fortnite can record a **replay file** of every match on your PC. Chest Counter r
 > **Replays must be turned on in Fortnite**: *Settings → Game → Replays → Record Replays: **On***. Without replays, the tool has nothing to read.
 
 Because Fortnite only writes the replay's decryption key when the match ends, chests are counted **a few seconds after each match**, not during it. While you play, the overlay shows **● MATCH IN PROGRESS**.
+
+## Manual replay cleanup
+
+Automatic cleanup is disabled. In settings (C), choose **Review replay cleanup** to see eligible files and their total size, then decide separately for each file whether to send it to the Windows Recycle Bin. The app cannot determine whether a replay was manually saved: keep any replay you want to preserve. Nothing is selected for removal by default.
+
+The newest ten replays and all files from the past seven days are kept. A candidate must have successful analysis evidence tied to a persisted match, an unchanged content hash, a complete header and an available exclusive read. Files analyzed before this feature have no evidence and are excluded until successfully re-analyzed. In settings, **Protect a file or folder** adds an absolute path to the protection list; edit `ProtectedReplayPaths` in `config.json` to remove entries. The app does not touch auxiliary files, history or statistics.
+
+Removed replays cannot be re-analyzed by future versions unless restored from the Recycle Bin. Sending files to the bin does not free disk space until it is emptied. Cancel any Windows prompt asking for permanent deletion.
 
 ## Getting started
 

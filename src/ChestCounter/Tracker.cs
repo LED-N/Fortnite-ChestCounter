@@ -220,9 +220,10 @@ public sealed class Tracker
         }
 
         MatchRecord record;
+        string digest;
         try
         {
-            record = Analyze(file, ParseTimeout);
+            record = Analyze(file, ParseTimeout, out digest);
         }
         catch (Exception ex)
         {
@@ -260,6 +261,9 @@ public sealed class Tracker
         }
 
         _data.Matches.Add(record);
+        file.Refresh();
+        if (file.Exists && FileKey(file) == key)
+            _data.ReplayEvidence[key] = new ReplayEvidence { SessionId = record.SessionId, Sha256 = digest };
         _data.ProcessedFiles[key] = record.SessionId;
         _store.SaveData(_data);
         if (_liveFile == file.FullName)
@@ -373,7 +377,9 @@ public sealed class Tracker
     }
 
     /// <summary>Reads the file (even while Fortnite writes it) and parses it on a lowest-priority background thread.</summary>
-    private MatchRecord Analyze(FileInfo file, TimeSpan timeout)
+    private MatchRecord Analyze(FileInfo file, TimeSpan timeout) => Analyze(file, timeout, out _);
+
+    private MatchRecord Analyze(FileInfo file, TimeSpan timeout, out string digest)
     {
         byte[] bytes;
         using (var fs = new FileStream(file.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
@@ -382,6 +388,7 @@ public sealed class Tracker
             fs.ReadExactly(bytes);
         }
 
+        digest = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
         MatchRecord? result = null;
         Exception? failure = null;
         var worker = new Thread(() =>

@@ -791,6 +791,8 @@ void Settings()
             $"{L.T("Opacité de l'overlay", "Overlay opacity", "Opacidad del overlay")} : {Percent(config.OverlayOpacity)}",
             $"{L.T("Ouvrir le rapport au démarrage", "Open the report at startup", "Abrir el informe al iniciar")} : {YesNo(config.OpenReportOnStart)}",
             $"{L.T("Dossier des replays", "Replays folder", "Carpeta de repeticiones")} : {config.DemosFolder}",
+            L.T("Nettoyage manuel des replays", "Review replay cleanup", "Revisar limpieza de repeticiones"),
+            L.T("Protéger un fichier ou dossier", "Protect a file or folder", "Proteger un archivo o carpeta"),
             L.T("← Retour", "← Back", "← Volver"),
         };
         selected = ConsoleUi.Menu(items, selected, L.T("↑ ↓ pour choisir, Entrée pour modifier", "↑ ↓ to choose, Enter to change", "↑ ↓ para elegir, Intro para cambiar"));
@@ -834,12 +836,47 @@ void Settings()
             case 7:
                 config.DemosFolder = ConsoleUi.Input(L.T("Nouveau dossier (Entrée = inchangé) : ", "New folder (Enter = unchanged): ", "Nueva carpeta (Intro = sin cambios): "), config.DemosFolder);
                 break;
+            case 8:
+                ReviewCleanup();
+                break;
+            case 9:
+                var protectedPath = ConsoleUi.Input(L.T("Chemin complet à protéger : ", "Full path to protect: ", "Ruta completa para proteger: "));
+                if (!string.IsNullOrWhiteSpace(protectedPath) && Path.IsPathFullyQualified(protectedPath))
+                    config.ProtectedReplayPaths.Add(Path.GetFullPath(protectedPath));
+                break;
             default:
                 store.SaveConfig(config);
                 return;
         }
         store.SaveConfig(config);
     }
+}
+
+void ReviewCleanup()
+{
+    ConsoleUi.Screen(appName, L.T("nettoyage manuel", "manual cleanup", "limpieza manual"));
+    ConsoleUi.Text(L.T("Aucun nettoyage automatique. Vérifie chaque fichier : conserve les replays enregistrés manuellement.",
+        "No automatic cleanup. Review each file and keep manually saved replays.",
+        "No hay limpieza automática. Revisa cada archivo y conserva las repeticiones guardadas manualmente."));
+    ConsoleUi.Text(L.T("Les replays supprimés ne pourront plus être réanalysés par les futures versions.",
+        "Removed replays cannot be re-analyzed by future versions.",
+        "Las repeticiones eliminadas no podrán volver a analizarse en versiones futuras."), ConsoleColor.Yellow);
+    ConsoleUi.Text(L.T("Annule toute demande de suppression definitive de Windows.", "Cancel any Windows prompt to permanently delete a file.", "Cancela cualquier aviso de Windows de eliminacion definitiva."), ConsoleColor.Yellow);
+    var persisted = store.LoadData();
+    var candidates = ReplayCleanup.Candidates(config, persisted, DateTime.UtcNow);
+    foreach (var f in candidates) ConsoleUi.Text($"{f.Name}  ({f.Length / 1048576.0:F1} MiB)");
+    ConsoleUi.Text(L.T($"À examiner : {candidates.Count} ; espace potentiel : {candidates.Sum(f => f.Length) / 1048576.0:F1} MiB",
+        $"To review: {candidates.Count}; potential space: {candidates.Sum(f => f.Length) / 1048576.0:F1} MiB",
+        $"Para revisar: {candidates.Count}; espacio posible: {candidates.Sum(f => f.Length) / 1048576.0:F1} MiB"));
+    long recycled = 0;
+    foreach (var f in candidates)
+    {
+        var choice = ConsoleUi.Menu(new[] { L.T("Conserver", "Keep", "Conservar"), L.T("Confirmer : replay non sauvegardé, envoyer à la corbeille", "Confirm: not manually saved, send to Recycle Bin", "Confirmar: no guardada manualmente, enviar a la Papelera") }, 0,
+            L.T($"{f.Name} : confirmer", $"{f.Name}: confirm", $"{f.Name}: confirmar"));
+        if (choice == 1 && ReplayCleanup.Recycle(f, config, store.LoadData())) recycled += f.Length;
+    }
+    ConsoleUi.Text(L.T($"Envoyé à la corbeille : {recycled / 1048576.0:F1} MiB", $"Sent to Recycle Bin: {recycled / 1048576.0:F1} MiB", $"Enviado a la Papelera: {recycled / 1048576.0:F1} MiB"));
+    ConsoleUi.WaitEnter(L.T("Entrée pour continuer", "Enter to continue", "Intro para continuar"));
 }
 
 // Shows the new size / opacity on the overlay right away (it stays visible above the console).

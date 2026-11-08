@@ -105,6 +105,9 @@ public sealed class Config
 
     /// <summary>Minimum delay between two readings of the replay in progress (seconds, 10 minimum).</summary>
     public int LiveIntervalSeconds { get; set; } = 30;
+
+    /// <summary>Absolute paths protected from manual replay cleanup.</summary>
+    public List<string> ProtectedReplayPaths { get; set; } = new();
 }
 
 public sealed class TrackerData
@@ -116,6 +119,15 @@ public sealed class TrackerData
 
     /// <summary>Key = file name|size|last write ticks. Value = session id, "skipped" or "error: ...".</summary>
     public Dictionary<string, string> ProcessedFiles { get; set; } = new();
+
+    /// <summary>Evidence recorded only after successful analysis and persistence of a match.</summary>
+    public Dictionary<string, ReplayEvidence> ReplayEvidence { get; set; } = new();
+}
+
+public sealed class ReplayEvidence
+{
+    public string SessionId { get; set; } = "";
+    public string Sha256 { get; set; } = "";
 }
 
 /// <summary>Reads/writes JSON files atomically in the data folder.</summary>

@@ -22,9 +22,9 @@ Chest Counter lit les replays que Fortnite enregistre après chaque partie et ti
 
 ## Comment ça marche (et pourquoi c'est sans risque)
 
-Fortnite peut enregistrer un **fichier replay** de chaque partie sur ton PC. Chest Counter lit ces fichiers une fois la partie terminée, et rien d'autre.
+Fortnite peut enregistrer un **fichier replay** de chaque partie sur ton PC. Chest Counter lit ces fichiers une fois la partie terminée.
 
-- ✅ **Lit uniquement les replays** : les fichiers `.replay` que Fortnite écrit dans `%LOCALAPPDATA%\FortniteGame\Saved\Demos`. Ils sont ouverts en lecture seule et jamais modifiés.
+- ✅ **Lit uniquement les replays** : les fichiers `.replay` que Fortnite écrit dans `%LOCALAPPDATA%\FortniteGame\Saved\Demos`. Ils sont ouverts en lecture seule pour l’analyse.
 - ✅ **Aucune modification du jeu** : rien n'est touché dans le dossier d'installation de Fortnite, aucun fichier n'est ajouté ni modifié.
 - ✅ **Aucun accès à la mémoire du jeu** : l'outil ne lit, n'écrit et n'injecte jamais rien dans le processus de Fortnite. Il n'interagit pas du tout avec le jeu en cours.
 - ✅ **Aucune donnée envoyée** : pas de connexion, pas d'accès à ton compte Epic, pas de télémétrie. Le seul accès réseau est la vérification d'une nouvelle version sur GitHub, désactivable dans les réglages.
@@ -34,6 +34,12 @@ Fortnite peut enregistrer un **fichier replay** de chaque partie sur ton PC. Che
 > **Les replays doivent être activés dans Fortnite** : *Paramètres → Jeu → Replays → Enregistrer les replays : **Activé***. Sans replays, l'outil n'a rien à lire.
 
 Comme Fortnite n'écrit la clé de déchiffrement du replay qu'à la fin de la partie, les coffres sont comptés **quelques secondes après chaque partie**, pas pendant. Pendant que tu joues, l'overlay affiche **● PARTIE EN COURS**.
+
+## Nettoyage manuel des replays
+
+Aucun nettoyage automatique. Dans les réglages (C), la liste indique les fichiers et leur taille, puis demande une confirmation distincte pour chaque envoi à la corbeille Windows. L’application ne peut pas identifier les replays sauvegardés manuellement : conserve ceux que tu souhaites garder. Les dix plus récents et ceux des sept derniers jours sont conservés. Seuls les fichiers analysés avec succès, liés à une partie enregistrée et inchangés peuvent être proposés. Les anciennes analyses sans preuve sont exclues jusqu’à leur réanalyse.
+
+Les réglages permettent de protéger un fichier ou dossier par son chemin absolu ; pour retirer une protection, modifie `ProtectedReplayPaths` dans `config.json`. L’historique, les statistiques et les fichiers auxiliaires restent intacts. Les replays supprimés ne pourront pas être réanalysés par une future version sans restauration. La corbeille doit être vidée pour libérer l’espace ; annule toute demande Windows de suppression définitive.
 
 ## Pour commencer
 

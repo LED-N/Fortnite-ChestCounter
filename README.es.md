@@ -22,9 +22,9 @@ Chest Counter lee las repeticiones que Fortnite guarda después de cada partida 
 
 ## Cómo funciona (y por qué es seguro)
 
-Fortnite puede grabar un **archivo de repetición** de cada partida en tu PC. Chest Counter lee esos archivos cuando termina la partida, y nada más.
+Fortnite puede grabar un **archivo de repetición** de cada partida en tu PC. Chest Counter lee esos archivos cuando termina la partida.
 
-- ✅ **Solo lee archivos de repetición**: los archivos `.replay` que Fortnite escribe en `%LOCALAPPDATA%\FortniteGame\Saved\Demos`. Se abren en solo lectura y nunca se modifican.
+- ✅ **Solo lee archivos de repetición**: los archivos `.replay` que Fortnite escribe en `%LOCALAPPDATA%\FortniteGame\Saved\Demos`. Se abren en solo lectura para el análisis.
 - ✅ **Ninguna modificación del juego**: no se toca nada de la carpeta de instalación de Fortnite, no se añade ni se parchea ningún archivo.
 - ✅ **Ningún acceso a la memoria del juego**: la herramienta nunca lee, escribe ni inyecta nada en el proceso de Fortnite. No interactúa en absoluto con el juego en marcha.
 - ✅ **No se envía ningún dato**: sin inicio de sesión, sin acceso a tu cuenta de Epic, sin telemetría. El único acceso a la red es la comprobación de una nueva versión en GitHub, que se puede desactivar en los ajustes.
@@ -34,6 +34,12 @@ Fortnite puede grabar un **archivo de repetición** de cada partida en tu PC. Ch
 > **Las repeticiones deben estar activadas en Fortnite**: *Ajustes → Juego → Repeticiones → Grabar repeticiones: **Activado***. Sin repeticiones, la herramienta no tiene nada que leer.
 
 Como Fortnite solo escribe la clave de descifrado de la repetición al final de la partida, los cofres se cuentan **unos segundos después de cada partida**, no durante. Mientras juegas, el overlay muestra **● PARTIDA EN CURSO**.
+
+## Limpieza manual de repeticiones
+
+No hay limpieza automática. En los ajustes (C), la lista muestra los archivos y su tamaño y pide una confirmación independiente para enviar cada uno a la Papelera de Windows. La aplicación no puede identificar las repeticiones guardadas manualmente: conserva las que quieras guardar. Se conservan las diez más recientes y todas las de los últimos siete días. Solo se ofrecen archivos con pruebas de análisis correcto, vinculados a una partida guardada y sin cambios. Los análisis antiguos sin pruebas quedan excluidos hasta que se analicen de nuevo.
+
+En ajustes puedes proteger un archivo o carpeta mediante su ruta absoluta; para retirar una protección, edita `ProtectedReplayPaths` en `config.json`. El historial, las estadísticas y los archivos auxiliares permanecen intactos. Las repeticiones eliminadas no podrán volver a analizarse en futuras versiones sin restaurarlas. Hay que vaciar la Papelera para liberar espacio; cancela cualquier aviso de Windows de eliminación definitiva.
 
 ## Primeros pasos
 
