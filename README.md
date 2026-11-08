@@ -1,6 +1,6 @@
 <div align="center">
 
-**English** · [Français](README.fr.md) · [Español](README.es.md)
+**English** · [Français](README.fr.md) · [Español](README.es.md) · [日本語](README.ja.md)
 
 # Fortnite Chest Counter
 
@@ -41,7 +41,9 @@ Because Fortnite only writes the replay's decryption key when the match ends, ch
 2. Turn on replays in Fortnite (see above).
 3. Run `ChestCounter.exe`.
    > Windows may show *"Windows protected your PC"* because the exe is not signed. Click *More info → Run anyway*.
-4. A short setup (arrow keys + Enter) asks for your **language** (English / French / Spanish), checks your **replays folder**, offers to count the **replays already on your PC**, and offers to **open the counter automatically when Fortnite starts**.
+4. A short setup (arrow keys + Enter) asks for your **language** (English / French / Spanish / Japanese), checks your **replays folder**, offers to count the **replays already on your PC**, and offers to **open the counter automatically when Fortnite starts**.
+
+For Japanese, select **日本語** during setup or run `ChestCounter.exe --lang ja`. The choice is saved for future launches; it can also be changed in settings (**C**).
 
 <p align="center"><img src="docs/setup-en.png" alt="First launch setup" width="760"></p>
 
@@ -143,7 +145,7 @@ To start over: run `ChestCounter.exe --reset-config`, or delete that folder.
 ## Command line options
 
 ```
-ChestCounter.exe --lang <fr|en|es>   change the language
+ChestCounter.exe --lang <fr|en|es|ja>   change the language
 ChestCounter.exe --demos <folder>    other replays folder
 ChestCounter.exe --data <folder>     other data folder
 ChestCounter.exe --once              analyze the finished replays, then quit

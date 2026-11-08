@@ -31,7 +31,7 @@ public sealed class TreasureFind
     public bool TimeExact { get; set; }
     /// <summary>True when the source chest was destroyed rather than opened.</summary>
     public bool SourceDestroyed { get; set; }
-    public string SourceLabel => SourceDestroyed ? $"{L.Name(SourceKind)} ({L.T("détruit", "destroyed", "destruido")})" : L.Name(SourceKind);
+    public string SourceLabel => SourceDestroyed ? $"{L.Name(SourceKind)} ({L.T("détruit", "destroyed", "destruido", "破壊")})" : L.Name(SourceKind);
     /// <summary>When it was obtained (replay seconds). Exact for golden chests, estimated otherwise.</summary>
     public float? ObtainedAtSeconds { get; set; }
     /// <summary>Kind of container / interaction it came from (Coffre, Canon à butin...).</summary>
@@ -75,7 +75,7 @@ public sealed class MatchRecord
 
 public sealed class Config
 {
-    /// <summary>"fr", "en" or "es" (asked on first launch).</summary>
+    /// <summary>"fr", "en", "es" or "ja" (asked on first launch).</summary>
     public string? Language { get; set; }
 
     /// <summary>Selected profile (Epic id or name of the account the player plays on); null = most recent one.</summary>
@@ -163,13 +163,7 @@ public sealed class Store
     public string ErrorLogPath => Path.Combine(Folder, "errors.log");
 
     /// <summary>Known treasure hunt prize ids (week 1), in the chosen language. Unknown ids are added automatically with an empty name.</summary>
-    public static Dictionary<string, string> DefaultPrizeNames => new()
-    {
-        ["DelilahPrize:dpid_item1"] = L.T("Gantelets d'A$AP Rocky en or massif (pioche) ?", "A$AP Rocky solid gold gauntlets (pickaxe) ?", "Guanteletes de oro macizo de A$AP Rocky (pico) ?"),
-        ["DelilahPrize:dpid_item2"] = L.T("Plunder in Paradise (écran de chargement)", "Plunder in Paradise (loading screen)", "Plunder in Paradise (pantalla de carga)"),
-        ["DelilahPrize:dpid_item3"] = L.T("Mercedes-AMG G 63 (véhicule) ?", "Mercedes-AMG G 63 (vehicle) ?", "Mercedes-AMG G 63 (vehículo) ?"),
-        ["DelilahPrize:dpid_item4"] = L.T("No Trespassing (piste musicale)", "No Trespassing (music track)", "No Trespassing (pista musical)"),
-    };
+    public static Dictionary<string, string> DefaultPrizeNames => TreasureNames.DefaultPrizeNames;
 
     public void LoadPrizeNames()
     {
@@ -260,7 +254,7 @@ public sealed class Store
             // Keep a copy of the unreadable file rather than silently losing the history.
             var backup = path + $".corrupt-{DateTime.Now:yyyyMMdd-HHmmss}";
             File.Copy(path, backup, overwrite: true);
-            Console.WriteLine(L.T($"Fichier illisible ({ex.Message}), copie de sauvegarde : {backup}", $"Unreadable file ({ex.Message}), backup copy: {backup}", $"Archivo ilegible ({ex.Message}), copia de seguridad: {backup}"));
+            Console.WriteLine(L.T($"Fichier illisible ({ex.Message}), copie de sauvegarde : {backup}", $"Unreadable file ({ex.Message}), backup copy: {backup}", $"Archivo ilegible ({ex.Message}), copia de seguridad: {backup}", $"ファイルを読み取れません（{ex.Message}）。バックアップ：{backup}"));
 
             return null;
         }

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/ChestCounter/ChestCounter.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(SkipJapanese)' == 'true'">
+    <Compile Remove="JapaneseRegression.cs" />
+  </ItemGroup>
+</Project>
