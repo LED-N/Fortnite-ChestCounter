@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Net;
 using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 
 namespace ChestCounter;
 
@@ -94,6 +96,7 @@ public static class ReportWriter
     {
         try
         {
+            ImportServer.Apply(data);
             var view = Profiles.View(data, config);
             WriteAtomic(store.ReportPath, Report(config, view, Profiles.List(data)));
             WriteAtomic(store.OverlayPath, Overlay(OverlayModel.Build(view, null, false)));
@@ -167,6 +170,10 @@ public static class ReportWriter
         .profiles{margin:-12px 0 20px;font-size:13px}
         """;
 
+    /// <summary>Auto refresh that can be paused (while teammate replays are being imported, a reload would cancel the import).</summary>
+    private static string RefreshScript(int seconds) =>
+        "<script>window.__busy=false;setTimeout(function(){if(!window.__busy)location.reload();}," + seconds * 1000 + ");</script>";
+
     public static string Report(Config config, TrackerData data, IReadOnlyList<Profile> profiles)
     {
         var progress = Progress;
@@ -176,6 +183,11 @@ public static class ReportWriter
         var best = matches.Count > 0 ? matches.Max(m => m.ChestsOpened) : 0;
         var treasures = matches.Sum(m => m.TreasureFinds.Count);
         var session = matches.Where(IsThisSession).Sum(m => m.ChestsOpened);
+        static int TeamOf(MatchRecord m) => m.ChestsOpened + m.Team.Sum(t => t.Chests);
+        var teamTotal = matches.Sum(TeamOf);
+        var teamAvg = matches.Count > 0 ? (double)teamTotal / matches.Count : 0;
+        var teamBest = matches.Count > 0 ? matches.Max(TeamOf) : 0;
+        var teamSession = matches.Where(IsThisSession).Sum(TeamOf);
         var player = matches.Select(m => m.PlayerName).FirstOrDefault(n => !string.IsNullOrEmpty(n)) ?? "";
 
         var sb = new StringBuilder();
@@ -187,36 +199,57 @@ public static class ReportWriter
         sb.Append($"""
             <!doctype html><html lang="{L.Code}"><head><meta charset="utf-8">
             <meta name="viewport" content="width=device-width,initial-scale=1">
-            <meta http-equiv="refresh" content="{(progress != null ? 2 : 15)}">
+            {RefreshScript(progress != null ? 2 : 15)}
             <title>{title}</title><style>{Style}</style></head><body><main>
             <header><h1>{title}{(player.Length > 0 ? " · " + H(player) : "")}</h1>
             <span class="muted">{updated}</span></header>
             {LoadingCard(progress)}{ProfilesLine(profiles, player)}
             <section class="tiles">
-              <div class="tile main"><div class="v">{totalChests.ToString("N0", Fr)}</div><div class="l">{L.T("coffres ouverts au total", "chests opened in total", "cofres abiertos en total")}</div></div>
-              <div class="tile"><div class="v">{matches.Count.ToString("N0", Fr)}</div><div class="l">{L.T("parties analysées", "matches analyzed", "partidas analizadas")}</div></div>
-              <div class="tile"><div class="v">{avg.ToString("0.0", Fr)}</div><div class="l">{L.T("coffres par partie", "chests per match", "cofres por partida")}</div></div>
-              <div class="tile"><div class="v">{best}</div><div class="l">{L.T("record en une partie", "best match", "récord en una partida")}</div></div>
-              <div class="tile"><div class="v">{session}</div><div class="l">{L.T("coffres depuis le lancement de l'outil", "chests since the tool was started", "cofres desde que se abrió la herramienta")}</div></div>
-              <div class="tile"><div class="v">{treasures}</div><div class="l">{L.T("trésors repérés", "treasures found", "tesoros encontrados")}</div></div>
+              <div class="tile main"><div class="v" id="v-total" data-s="{totalChests.ToString("N0", Fr)}" data-t="{teamTotal.ToString("N0", Fr)}">{totalChests.ToString("N0", Fr)}</div><div class="l" id="l-total" data-s="{L.T("coffres ouverts au total", "chests opened in total", "cofres abiertos en total")}" data-t="{L.T("coffres de l'équipe au total (au moins)", "team chests in total (at least)", "cofres del equipo en total (al menos)")}">{L.T("coffres ouverts au total", "chests opened in total", "cofres abiertos en total")}</div></div>
+              <div class="tile"><div class="v" id="v-n">{matches.Count.ToString("N0", Fr)}</div><div class="l">{L.T("parties analysées", "matches analyzed", "partidas analizadas")}</div></div>
+              <div class="tile"><div class="v" id="v-avg" data-s="{avg.ToString("0.0", Fr)}" data-t="{teamAvg.ToString("0.0", Fr)}">{avg.ToString("0.0", Fr)}</div><div class="l" id="l-avg" data-s="{L.T("coffres par partie", "chests per match", "cofres por partida")}" data-t="{L.T("coffres d'équipe par partie", "team chests per match", "cofres de equipo por partida")}">{L.T("coffres par partie", "chests per match", "cofres por partida")}</div></div>
+              <div class="tile"><div class="v" id="v-best" data-s="{best}" data-t="{teamBest}">{best}</div><div class="l" id="l-best" data-s="{L.T("record en une partie", "best match", "récord en una partida")}" data-t="{L.T("record d'équipe en une partie", "team best match", "récord de equipo en una partida")}">{L.T("record en une partie", "best match", "récord en una partida")}</div></div>
+              <div class="tile"><div class="v" id="v-ses" data-s="{session}" data-t="{teamSession}">{session}</div><div class="l" id="l-ses" data-s="{L.T("coffres depuis le lancement de l'outil", "chests since the tool was started", "cofres desde que se abrió la herramienta")}" data-t="{L.T("coffres d'équipe depuis le lancement", "team chests since the tool was started", "cofres de equipo desde que se abrió la herramienta")}">{L.T("coffres depuis le lancement de l'outil", "chests since the tool was started", "cofres desde que se abrió la herramienta")}</div></div>
+              <div class="tile"><div class="v" id="v-tre">{treasures}</div><div class="l">{L.T("trésors repérés", "treasures found", "tesoros encontrados")}</div></div>
             </section>
             """);
+
+        var chip = "font:inherit;font-weight:600;padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer";
+        sb.Append($"<div id=\"filters\" style=\"margin-top:18px;display:flex;flex-wrap:wrap;gap:8px;align-items:center\"><span class=\"muted\">{L.T("Parties prises en compte :", "Matches included:", "Partidas incluidas:")}</span>");
+        foreach (var (n, label) in new[] { (1, L.T("Dernière partie", "Last match", "Última partida")), (3, "3"), (5, "5"), (10, "10"), (20, "20"), (50, "50"), (0, L.T("Toutes", "All", "Todas")) })
+        {
+            sb.Append($"<button type=\"button\" class=\"chip\" data-n=\"{n}\" style=\"{chip}\">{label}</button>");
+        }
+        sb.Append("</div>");
+        var teamParts = TeamSection(matches).Split("<!--TEAMSPLIT-->");
+        sb.Append(teamParts[0]);
 
         // Last 30 days, one bar per day.
         var today = DateTime.Now.Date;
         var days = Enumerable.Range(0, 30).Select(i => today.AddDays(i - 29)).ToList();
         var perDay = days.Select(d => matches.Where(m => When(m).Date == d).Sum(m => m.ChestsOpened)).ToList();
+        var perDayTeam = days.Select(d => matches.Where(m => When(m).Date == d).Sum(TeamOf)).ToList();
         var max = Math.Max(1, perDay.Max());
+        var maxT = Math.Max(1, perDayTeam.Max());
         sb.Append($"<h2>{L.T("Coffres par jour (30 derniers jours)", "Chests per day (last 30 days)", "Cofres por día (últimos 30 días)")}</h2><div class=\"card chart\"><div class=\"bars\">");
         for (var i = 0; i < days.Count; i++)
         {
             var v = perDay[i];
             var h = (int)Math.Round(100.0 * v / max);
-            var tip = $"{days[i].ToString(L.T("ddd dd/MM", "ddd d MMM", "ddd dd/MM"), Fr)}{L.T(" : ", ": ", ": ")}{L.Count(v, "coffre", "chest", "cofre")}";
-            // Tooltip sits just above the bar top (bar height is a % of the 112px plot area).
-            sb.Append($"<div class=\"col\" aria-label=\"{H(tip)}\"><span class=\"tip\" style=\"bottom:calc({Math.Max(h, 3)}% + 6px)\">{H(tip)}</span><div class=\"bar{(v == 0 ? " zero" : "")}\" style=\"height:{h}%\"></div></div>");
+            var vt = perDayTeam[i];
+            var ht = (int)Math.Round(100.0 * vt / maxT);
+            var dayLabel = $"{days[i].ToString(L.T("ddd dd/MM", "ddd d MMM", "ddd dd/MM"), Fr)}{L.T(" : ", ": ", ": ")}";
+            var tip = dayLabel + L.Count(v, "coffre", "chest", "cofre");
+            var tipT = dayLabel + L.Count(vt, "coffre", "chest", "cofre");
+            // Tooltip sits just above the bar top. data-* = solo / team values, swapped by the team button.
+            sb.Append($"<div class=\"col\" aria-label=\"{H(tip)}\" data-h=\"{h}\" data-ht=\"{ht}\" data-z=\"{(v == 0 ? 1 : 0)}\" data-zt=\"{(vt == 0 ? 1 : 0)}\" data-tip=\"{H(tip)}\" data-tipt=\"{H(tipT)}\"><span class=\"tip\" style=\"bottom:calc({Math.Max(h, 3)}% + 6px)\">{H(tip)}</span><div class=\"bar{(v == 0 ? " zero" : "")}\" style=\"height:{h}%\"></div></div>");
         }
         sb.Append($"</div><div class=\"axis\"><span>{days[0].ToString(L.T("dd/MM", "d MMM", "dd/MM"), Fr)}</span><span>{L.T("aujourd'hui", "today", "hoy")}</span></div></div>");
+
+        if (teamParts.Length > 1)
+        {
+            sb.Append(teamParts[1]);
+        }
 
         // Breakdown by chest type, then the other interactions (not in the total).
         var byKind = matches.SelectMany(m => m.Chests).GroupBy(c => c.Kind).OrderByDescending(g => g.Count()).ToList();
@@ -288,10 +321,13 @@ public static class ReportWriter
         sb.Append($"<h2>{L.T("Dernières parties", "Latest matches", "Últimas partidas")}</h2><div class=\"card\"><table><tr><th>{L.T("Date", "Date", "Fecha")}</th><th>{L.T("Mode", "Mode", "Modo")}</th><th>{L.T("Place", "Placement", "Puesto")}</th><th style=\"text-align:right\">{L.T("Coffres", "Chests", "Cofres")}</th><th>{L.T("Trésor", "Treasure", "Tesoro")}</th></tr>");
         foreach (var m in matches.Take(100))
         {
+            var mi = matches.IndexOf(m);
             var treasure = string.Join("<br>", m.TreasureFinds.Select(f => $"<span class=\"star\">{(f.FromGoldenChest ? "★★" : "★")} {H(f.DisplayName)}</span>"));
-            sb.Append($"<tr><td class=\"nw\">{L.DateTimeShort(When(m))}</td><td>{H(Pretty.Playlist(m.Playlist))}</td><td>{H(Pretty.Placement(m))}</td><td class=\"n\">{m.ChestsOpened}</td><td class=\"items\">{treasure}</td></tr>");
+            sb.Append($"<tr class=\"mrow\" data-i=\"{mi}\"><td class=\"nw\">{L.DateTimeShort(When(m))}</td><td>{H(Pretty.Playlist(m.Playlist))}</td><td>{H(Pretty.Placement(m))}</td><td class=\"n\">{m.ChestsOpened}</td><td class=\"items\">{treasure}</td></tr>");
         }
         sb.Append("</table></div>");
+
+        sb.Append(ControlsScript(matches, days));
 
         sb.Append(L.T(
             """
@@ -316,6 +352,163 @@ public static class ReportWriter
             </main></body></html>
             """));
         return sb.ToString();
+    }
+
+    /// <summary>"Team" button + hidden section: chests of the teammates (a minimum: the replay only holds what the recorder's game saw).</summary>
+    private static string TeamSection(List<MatchRecord> matches)
+    {
+        var withTeam = matches.Where(m => m.Team.Count > 0).ToList();
+        if (withTeam.Count == 0)
+        {
+            return "";
+        }
+        var mine = withTeam.Sum(m => m.ChestsOpened);
+        var mates = withTeam.Sum(m => m.Team.Sum(t => t.Chests));
+        var canImport = ImportServer.Port != 0;
+        var sb = new StringBuilder();
+        sb.Append($"""
+            <div style="margin-top:18px"><button id="teambtn" type="button" style="font:inherit;font-weight:600;padding:8px 16px;border-radius:10px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);cursor:pointer">{L.T("👥 Voir l'équipe", "👥 Show the team", "👥 Ver el equipo")}</button></div>
+            <!--TEAMSPLIT-->
+            <section id="team" style="display:none">
+            <div class="card flag">{L.T(
+                "⚠ <b>Attention : les chiffres de tes coéquipiers peuvent être plus bas que la réalité.</b><br>Le replay est l'enregistrement de <b>ton</b> jeu : il ne montre que ce qui se passe autour de toi. Si un coéquipier est loin de toi quand il ouvre ou casse un coffre, ton jeu ne reçoit pas l'information et ce coffre n'est pas compté. Ses vrais chiffres sont donc <b>au moins</b> ceux affichés. Les tiens, eux, sont complets.",
+                "⚠ <b>Careful: your teammates' numbers may be lower than reality.</b><br>The replay is a recording of <b>your</b> game: it only shows what happens around you. If a teammate is far from you when they open or break a chest, your game never receives that information and the chest is not counted. Their real numbers are therefore <b>at least</b> those shown. Yours are complete.",
+                "⚠ <b>Atención: las cifras de tus compañeros pueden ser más bajas que la realidad.</b><br>La repetición es la grabación de <b>tu</b> juego: solo muestra lo que pasa a tu alrededor. Si un compañero está lejos de ti cuando abre o rompe un cofre, tu juego no recibe esa información y ese cofre no se cuenta. Sus cifras reales son por tanto <b>al menos</b> las mostradas. Las tuyas están completas.")}</div>
+            <h2>{L.T("Par coéquipier", "By teammate", "Por compañero")}</h2><div class="card"><table><tr><th>{L.T("Joueur", "Player", "Jugador")}</th><th style="text-align:right">{L.T("Parties", "Matches", "Partidas")}</th><th style="text-align:right">{L.T("Coffres (au moins)", "Chests (at least)", "Cofres (al menos)")}</th>{(canImport ? $"<th>{L.T("Replays", "Replays", "Repeticiones")}</th>" : "")}</tr>
+            """);
+        var rows = withTeam.SelectMany(m => m.Team).GroupBy(t => string.IsNullOrEmpty(t.EpicId) ? t.Name : t.EpicId)
+            .Select(g => (Name: g.Last().Name, Epic: g.Last().EpicId ?? "", Matches: g.Count(), Chests: g.Sum(t => t.Chests), Exact: g.Count(t => t.Imported), Me: false)).ToList();
+        var myName = withTeam.Select(m => m.PlayerName).FirstOrDefault(n => !string.IsNullOrEmpty(n)) ?? "?";
+        rows.Add((myName, "", withTeam.Count, mine, withTeam.Count, true));
+        foreach (var r in rows.OrderByDescending(r => r.Chests))
+        {
+            var tag = r.Me ? $" <span style=\"font-size:.75em;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent)\">{L.T("vous", "you", "tú")}</span>" : "";
+            var check = r.Exact == r.Matches && !r.Me ? " <span style=\"color:var(--accent)\" title=\"" + L.T("Chiffre exact", "Exact figure", "Cifra exacta") + "\">✓</span>" : "";
+            var cell = "";
+            if (canImport)
+            {
+                var state = r.Exact > 0 ? L.T($"{r.Exact}/{r.Matches} parties exactes", $"{r.Exact}/{r.Matches} exact matches", $"{r.Exact}/{r.Matches} partidas exactas") : "";
+                cell = r.Me ? "<td></td>" :
+                    $"<td><button type=\"button\" class=\"impbtn\" data-name=\"{H(r.Name)}\" data-epic=\"{H(r.Epic)}\" style=\"font:inherit;font-size:13px;font-weight:600;padding:4px 10px;border-radius:8px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);cursor:pointer\">{L.T("Importer les replays", "Import replays", "Importar repeticiones")}</button> <span class=\"impst muted\" style=\"font-size:12px\">{state}</span></td>";
+            }
+            sb.Append($"<tr><td>{H(r.Name)}{tag}</td><td class=\"n\">{r.Matches}</td><td class=\"n\">{r.Chests}{check}</td>{cell}</tr>");
+        }
+        sb.Append($"</table></div><h2>{L.T("Par partie", "By match", "Por partida")}</h2><div class=\"card\"><table><tr><th>{L.T("Date", "Date", "Fecha")}</th><th style=\"text-align:right\">{L.T("Toi", "You", "Tú")}</th><th>{L.T("Coéquipiers", "Teammates", "Compañeros")}</th><th style=\"text-align:right\">{L.T("Équipe", "Team", "Equipo")}</th></tr>");
+        foreach (var m in withTeam.Take(100))
+        {
+            var detail = string.Join(", ", m.Team.OrderByDescending(t => t.Chests).Select(t => $"{H(t.Name)} <b>{t.Chests}</b>{(t.Imported ? " <span style=\"color:var(--accent)\">✓</span>" : "")}"));
+            sb.Append($"<tr class=\"mrow\" data-i=\"{matches.IndexOf(m)}\"><td class=\"nw\">{L.DateTimeShort(When(m))}</td><td class=\"n\">{m.ChestsOpened}</td><td>{detail}</td><td class=\"n\">{m.ChestsOpened + m.Team.Sum(t => t.Chests)}</td></tr>");
+        }
+        sb.Append("</table></div>");
+        if (canImport)
+        {
+            sb.Append("<p class=\"muted\" style=\"font-size:13px\">" + L.T(
+                "✓ = chiffre exact, lu dans le replay du joueur lui-même. Pour l'obtenir : demande à ton coéquipier ses fichiers .replay (dossier %LOCALAPPDATA%\\FortniteGame\\Saved\\Demos), puis clique sur « Importer les replays » à côté de son nom et choisis-les. Les parties que vous n'avez pas jouées ensemble sont ignorées.",
+                "✓ = exact figure, read from the player's own replay. To get it: ask your teammate for their .replay files (folder %LOCALAPPDATA%\\FortniteGame\\Saved\\Demos), then click \"Import replays\" next to their name and pick them. Matches you did not play together are ignored.",
+                "✓ = cifra exacta, leída de la repetición del propio jugador. Para obtenerla: pídele a tu compañero sus archivos .replay (carpeta %LOCALAPPDATA%\\FortniteGame\\Saved\\Demos), luego pulsa «Importar repeticiones» junto a su nombre y elígelos. Las partidas que no jugasteis juntos se ignoran.")
+                + "</p><input type=\"file\" id=\"impfile\" accept=\".replay\" multiple hidden>");
+        }
+        sb.Append("</section>");
+        if (canImport)
+        {
+            var texts = JsonSerializer.Serialize(new
+            {
+                progress = L.T("Lecture {a}/{b}…", "Reading {a}/{b}…", "Leyendo {a}/{b}…"),
+                done = L.T("{a} partie(s) importée(s), {b} ignorée(s)", "{a} match(es) imported, {b} skipped", "{a} partida(s) importada(s), {b} ignorada(s)"),
+                noserver = L.T("Le programme ne répond pas : ouvre-le puis recharge la page.", "The program is not answering: open it and reload the page.", "El programa no responde: ábrelo y recarga la página."),
+            }, new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+            sb.Append("<script>(function(){var IMP={port:" + ImportServer.Port + ",token:\"" + ImportServer.Token + "\",t:" + texts + "};" + ImportJs + "})();</script>");
+        }
+        return sb.ToString();
+    }
+
+    private const string ImportJs = """
+        var inp=document.getElementById('impfile');if(!inp)return;var cur=null;
+        document.querySelectorAll('.impbtn').forEach(function(b){b.addEventListener('click',function(){cur=b;window.__busy=true;inp.value='';inp.click();});});
+        inp.addEventListener('cancel',function(){window.__busy=false;});
+        inp.addEventListener('change',async function(){
+          var files=[].slice.call(inp.files),btn=cur;
+          if(!btn||!files.length){window.__busy=false;return;}
+          var st=btn.parentNode.querySelector('.impst'),ok=0,skip=0,last='';
+          btn.disabled=true;
+          for(var i=0;i<files.length;i++){
+            st.textContent=IMP.t.progress.replace('{a}',i+1).replace('{b}',files.length);
+            try{
+              var r=await fetch('http://127.0.0.1:'+IMP.port+'/import?token='+IMP.token+'&name='+encodeURIComponent(btn.dataset.name)+'&epic='+encodeURIComponent(btn.dataset.epic||''),{method:'POST',body:files[i]});
+              var j=await r.json();
+              if(j.status==='updated'){ok++;}else{skip++;last=j.message||'';if(j.status==='token')break;}
+            }catch(e){skip++;last=IMP.t.noserver;break;}
+          }
+          st.textContent=IMP.t.done.replace('{a}',ok).replace('{b}',skip)+(last?' · '+last:'');
+          btn.disabled=false;
+          setTimeout(function(){window.__busy=false;if(ok>0)location.reload();},ok>0?2500:20000);
+        });
+        """;
+
+    /// <summary>Client-side controls: "match filter" chips + solo/team switch. Recomputes tiles, chart and match tables from embedded per-match numbers.</summary>
+    private static string ControlsScript(List<MatchRecord> matches, List<DateTime> days)
+    {
+        static int TeamOf(MatchRecord m) => m.ChestsOpened + m.Team.Sum(t => t.Chests);
+        string Unit(int n) => L.Count(n, "coffre", "chest", "cofre").Split(' ', 2)[1];
+        var cfg = new
+        {
+            lang = L.Code,
+            d = matches.Select(m => new { k = When(m).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), c = m.ChestsOpened, t = TeamOf(m), s = IsThisSession(m) ? 1 : 0, r = m.TreasureFinds.Count }),
+            days = days.Select(d => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+            dl = days.Select(d => d.ToString(L.T("ddd dd/MM", "ddd d MMM", "ddd dd/MM"), Fr)),
+            sep = L.T(" : ", ": ", ": "),
+            uz = Unit(0),
+            uo = Unit(1),
+            um = Unit(2),
+            one = L.T("dernière partie", "last match", "última partida"),
+            many = L.T("dernières parties", "last matches", "últimas partidas"),
+            hide = L.T("👥 Masquer l'équipe", "👥 Hide the team", "👥 Ocultar el equipo"),
+            show = L.T("👥 Voir l'équipe", "👥 Show the team", "👥 Ver el equipo"),
+        };
+        var json = JsonSerializer.Serialize(cfg, new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }).Replace("</", "<\\/");
+        return """
+            <script>
+            (function(){
+            var C=__CFG__;
+            var b=document.getElementById('teambtn'),sec=document.getElementById('team');
+            var team=false,n=0;
+            try{team=localStorage.getItem('chestcounter-team')==='1'}catch(e){}
+            try{n=parseInt(localStorage.getItem('chestcounter-n')||'0',10)||0}catch(e){}
+            function fmt(x,d){return x.toLocaleString(C.lang,{minimumFractionDigits:d,maximumFractionDigits:d})}
+            function unit(v){return v===0?C.uz:(v===1?C.uo:C.um)}
+            function setText(id,t){var e=document.getElementById(id);if(e)e.textContent=t}
+            function render(){
+              var all=n<=0||n>=C.d.length,list=all?C.d:C.d.slice(0,n);
+              var val=function(x){return team?x.t:x.c};
+              var tot=0,best=0,ses=0,tre=0;
+              list.forEach(function(x){var v=val(x);tot+=v;if(v>best)best=v;ses+=team?x.t*x.s:x.c*x.s;tre+=x.r});
+              setText('v-total',fmt(tot,0));setText('v-n',fmt(list.length,0));setText('v-avg',fmt(list.length?tot/list.length:0,1));
+              setText('v-best',String(best));setText('v-ses',String(ses));setText('v-tre',String(tre));
+              var suf=all?'':' \u00b7 '+(n===1?C.one:n+' '+C.many);
+              ['l-total','l-avg','l-best','l-ses'].forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=e.getAttribute(team?'data-t':'data-s')+suf});
+              var per=C.days.map(function(k){var s=0;list.forEach(function(x){if(x.k===k)s+=val(x)});return s});
+              var mx=Math.max.apply(null,per.concat([1]));
+              document.querySelectorAll('.bars .col').forEach(function(c,i){
+                var v=per[i],h=Math.round(100*v/mx),bar=c.querySelector('.bar'),tip=c.querySelector('.tip'),t=C.dl[i]+C.sep+v+' '+unit(v);
+                bar.style.height=h+'%';bar.classList.toggle('zero',v===0);tip.textContent=t;tip.style.bottom='calc('+Math.max(h,3)+'% + 6px)';c.setAttribute('aria-label',t);
+              });
+              document.querySelectorAll('tr.mrow').forEach(function(r){r.style.display=(all||parseInt(r.getAttribute('data-i'),10)<n)?'':'none'});
+              document.querySelectorAll('#filters .chip').forEach(function(c){
+                var on=parseInt(c.getAttribute('data-n'),10)===(n>0?n:0);
+                c.style.background=on?'var(--accent-soft)':'var(--card)';c.style.color=on?'var(--accent)':'var(--ink)';c.style.borderColor=on?'var(--accent)':'var(--line)';
+              });
+              if(b){b.textContent=team?C.hide:C.show;b.setAttribute('data-open',team?'1':'0')}
+              if(sec)sec.style.display=team?'block':'none';
+            }
+            function go(){
+              document.querySelectorAll('#filters .chip').forEach(function(c){c.addEventListener('click',function(){n=parseInt(c.getAttribute('data-n'),10)||0;try{localStorage.setItem('chestcounter-n',String(n))}catch(e){}render()})});
+              if(b)b.addEventListener('click',function(){team=!team;try{localStorage.setItem('chestcounter-team',team?'1':'0')}catch(e){}render()});
+              render();
+            }
+            if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',go)}else{go()}
+            })();
+            </script>
+            """.Replace("__CFG__", json);
     }
 
     private static string LoadingCard(ScanProgress? p)
