@@ -4,7 +4,7 @@
 
 ## GitHubへの引き継ぎ
 
-追加依頼により、このフォルダーを `https://github.com/cherjp/Fortnite-ChestCounter.git` の `main`（`daba16d8e5cef4c9278dd4de325967a98cdba518`）に紐づけた。PR用ブランチは `codex/replay-key-validation-japanese`。以下の「.gitがなくコミット不可」は紐づけ前の履歴として残している。
+追加依頼により、このフォルダーを `https://github.com/cherjp/Fortnite-ChestCounter.git` の `main`（`daba16d8e5cef4c9278dd4de325967a98cdba518`）に紐づけた。PR用ブランチは `codex/replay-key-validation-japanese`。PR: https://github.com/cherjp/Fortnite-ChestCounter/pull/1 。以下の「.gitがなくコミット不可」は紐づけ前の履歴として残している。
 
 PRにはソース・回帰テスト・調査スクリプト・文書を含める。`dist/`、`bin/`、`obj/`、`docs/verification/`、リプレイ本体、Pythonキャッシュは除外する。検証フォルダーにはプレイヤー名・設定・集計履歴が含まれ得るため追跡しない。標準のGitHub Actionsにも回帰テスト実行を追加した。
 

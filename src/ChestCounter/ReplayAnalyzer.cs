@@ -845,4 +845,3 @@ public static class ChestKinds
         return b.Contains("chest") ? Other : OtherContainer;
     }
 }
-
