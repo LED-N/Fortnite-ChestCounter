@@ -517,8 +517,26 @@ catch
 }
 
 var nextScan = DateTime.UtcNow.AddSeconds(2);
+ImportServer.OnQueued = () => wake.Set();
+ImportServer.Start();
+if (ImportServer.Port != 0)
+{
+    ReportWriter.WriteAll(store, config, data); // the report needs the port and the secret of this run
+}
 while (!quit)
 {
+    // Teammate replays sent from the report ("Import the replays" button).
+    var imported = false;
+    while (ImportServer.Queue.TryDequeue(out var imp))
+    {
+        imp.Done.TrySetResult(ImportServer.Merge(data, imp));
+        imported = true;
+    }
+    if (imported)
+    {
+        store.SaveData(data);
+        ReportWriter.WriteAll(store, config, data);
+    }
     if (DateTime.UtcNow >= nextScan)
     {
         try

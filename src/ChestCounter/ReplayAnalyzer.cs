@@ -93,7 +93,7 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
     private readonly List<GrantEvent> _grants = new();
 
     /// <summary>Bump when the analysis changes so that existing replays are re-analyzed.</summary>
-    public const int CurrentVersion = 10;
+    public const int CurrentVersion = 11;
 
     private static readonly bool ProbeDebug = Environment.GetEnvironmentVariable("CHESTCOUNTER_DEBUG") == "4";
 
@@ -521,6 +521,19 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
         var isRecorderTarget = recorderPs != null && targetPlayerStates.Contains(recorderPs.Value);
         var targetPawns = _pawnToPlayerState.Where(kv => targetPlayerStates.Contains(kv.Value)).Select(kv => kv.Key).ToHashSet();
 
+        // --- Teammates: same team as the target, chests the replay shows them opening -------------
+        var team = new List<TeammateRecord>();
+        if (target?.TeamIndex is int teamIndex)
+        {
+            foreach (var mate in players.Where(p => p.TeamIndex == teamIndex && p.Id != target.Id && !p.IsBot))
+            {
+                var mateStates = _playerStateToPlayerId.Where(kv => kv.Value == mate.Id).Select(kv => kv.Key).ToHashSet();
+                var matePawns = _pawnToPlayerState.Where(kv => mateStates.Contains(kv.Value)).Select(kv => kv.Key).ToHashSet();
+                var mateChests = _searches.Count(x => x.SearcherPawn is uint sp && matePawns.Contains(sp) && ChestKinds.IsChest(ChestKinds.Classify(x.Label)));
+                team.Add(new TeammateRecord { Name = mate.PlayerName ?? "?", EpicId = mate.EpicId, Chests = mateChests });
+            }
+        }
+
         // --- Everything the target searched / interacted with ------------------------------------
         var interactions = _searches
             .Where(s => s.SearcherPawn is uint p && targetPawns.Contains(p))
@@ -733,6 +746,7 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
             IsBattleRoyale = !string.IsNullOrEmpty(replay.GameData?.CurrentPlaylist) || chests.Count > 0,
             Chests = chests,
             TreasureFinds = finds,
+            Team = team,
         };
     }
 }

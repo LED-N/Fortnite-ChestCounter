@@ -44,6 +44,25 @@ public sealed class TreasureFind
     public List<string> AlsoPossible { get; set; } = new();
 }
 
+/// <summary>A teammate of the tracked player in one match and the chests the replay shows them opening (a minimum: far-away chests may be missing).</summary>
+public sealed class TeammateRecord
+{
+    public string Name { get; set; } = "";
+    public string? EpicId { get; set; }
+    public int Chests { get; set; }
+    /// <summary>True when the figure comes from the teammate's own replay (exact, not a minimum).</summary>
+    public bool Imported { get; set; }
+}
+
+/// <summary>Chests a teammate opened in one match, read from that teammate's own replay. Kept apart so a re-analysis of the user's replays cannot erase it.</summary>
+public sealed class TeammateImport
+{
+    public string SessionId { get; set; } = "";
+    public string? EpicId { get; set; }
+    public string Name { get; set; } = "";
+    public int Chests { get; set; }
+}
+
 public sealed class MatchRecord
 {
     public string SessionId { get; set; } = "";
@@ -71,6 +90,8 @@ public sealed class MatchRecord
     public bool IsBattleRoyale { get; set; } = true;
     public List<ChestRecord> Chests { get; set; } = new();
     public List<TreasureFind> TreasureFinds { get; set; } = new();
+    /// <summary>Teammates (same team as the tracked player) and their chests, as far as the replay shows them.</summary>
+    public List<TeammateRecord> Team { get; set; } = new();
 }
 
 public sealed class Config
@@ -113,6 +134,9 @@ public sealed class TrackerData
     public int AnalyzerVersion { get; set; } = 1;
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public List<MatchRecord> Matches { get; set; } = new();
+
+    /// <summary>Exact teammate figures imported from the teammates' own replays.</summary>
+    public List<TeammateImport> TeammateImports { get; set; } = new();
 
     /// <summary>Key = file name|size|last write ticks. Value = session id, "skipped" or "error: ...".</summary>
     public Dictionary<string, string> ProcessedFiles { get; set; } = new();
