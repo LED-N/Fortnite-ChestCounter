@@ -93,7 +93,7 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
     private readonly List<GrantEvent> _grants = new();
 
     /// <summary>Bump when the analysis changes so that existing replays are re-analyzed.</summary>
-    public const int CurrentVersion = 10;
+    public const int CurrentVersion = 11;
 
     private static readonly bool ProbeDebug = Environment.GetEnvironmentVariable("CHESTCOUNTER_DEBUG") == "4";
 
@@ -741,6 +741,28 @@ internal static class SafeExt { }
 
 public static class TreasureNames
 {
+    // Recognize only shipped defaults for this prize id; edited names are always kept verbatim.
+    private static readonly Dictionary<string, (string Fr, string En, string Es, string Ja)> StandardPrizeNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["DelilahPrize:dpid_item1"] = ("Gantelets d'A$AP Rocky en or massif (pioche) ?", "A$AP Rocky solid gold gauntlets (pickaxe) ?", "Guanteletes de oro macizo de A$AP Rocky (pico) ?", "A$AP Rockyの純金ガントレット（ツルハシ）？"),
+        ["DelilahPrize:dpid_item2"] = ("Plunder in Paradise (écran de chargement)", "Plunder in Paradise (loading screen)", "Plunder in Paradise (pantalla de carga)", "Plunder in Paradise（ロード画面）"),
+        ["DelilahPrize:dpid_item3"] = ("Mercedes-AMG G 63 (véhicule) ?", "Mercedes-AMG G 63 (vehicle) ?", "Mercedes-AMG G 63 (vehículo) ?", "Mercedes-AMG G 63（乗り物）？"),
+        ["DelilahPrize:dpid_item4"] = ("No Trespassing (piste musicale)", "No Trespassing (music track)", "No Trespassing (pista musical)", "No Trespassing（ミュージック）"),
+    };
+
+    public static Dictionary<string, string> DefaultPrizeNames => StandardPrizeNames.ToDictionary(
+        kv => kv.Key, kv => L.T(kv.Value.Fr, kv.Value.En, kv.Value.Es, kv.Value.Ja));
+
+    private static string DisplayPrizeName(string id, string stored)
+    {
+        if (StandardPrizeNames.TryGetValue(id, out var names)
+            && (stored == names.Fr || stored == names.En || stored == names.Es || stored == names.Ja))
+        {
+            return L.T(names.Fr, names.En, names.Es, names.Ja);
+        }
+        return stored;
+    }
+
     /// <summary>Prize id -> display name, loaded from treasures.json (user editable).</summary>
     public static Dictionary<string, string> PrizeNames { get; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -757,7 +779,7 @@ public static class TreasureNames
             var unknown = item.StartsWith(UnknownPrefix, StringComparison.OrdinalIgnoreCase) || item.StartsWith(OldUnknownPrefix, StringComparison.OrdinalIgnoreCase);
             if (PrizeNames.TryGetValue(item, out var name) && !string.IsNullOrWhiteSpace(name))
             {
-                return name;
+                return DisplayPrizeName(item, name);
             }
             if (unknown)
             {
@@ -772,9 +794,9 @@ public static class TreasureNames
                 }
                 // Not a golden chest prize (those carry their id): one of the treasure hunt gizmos (golden
                 // firework, portable extractor, locators, extraction accelerator), exact one not in the replay.
-                return L.T(UnknownGizmoFr, UnknownGizmoEn, UnknownGizmoEs);
+                return L.T(UnknownGizmoFr, UnknownGizmoEn, UnknownGizmoEs, "お宝アイテム（種類不明）");
             }
-            return L.T($"Trésor inconnu ({item[(item.IndexOf(':') + 1)..]})", $"Unknown treasure ({item[(item.IndexOf(':') + 1)..]})", $"Tesoro desconocido ({item[(item.IndexOf(':') + 1)..]})");
+            return L.T($"Trésor inconnu ({item[(item.IndexOf(':') + 1)..]})", $"Unknown treasure ({item[(item.IndexOf(':') + 1)..]})", $"Tesoro desconocido ({item[(item.IndexOf(':') + 1)..]})", $"不明なお宝（{item[(item.IndexOf(':') + 1)..]}）");
         }
 
 

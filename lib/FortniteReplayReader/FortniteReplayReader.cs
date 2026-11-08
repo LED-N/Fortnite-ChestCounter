@@ -338,6 +338,11 @@ public class ReplayReader : Unreal.Core.ReplayReader<FortniteReplay>
             };
         }
 
+        if (!Replay.Info.HasValidEncryptionKey)
+        {
+            throw new InvalidReplayEncryptionKeyException();
+        }
+
         var key = Replay.Info.EncryptionKey;
         var encryptedBytes = archive.ReadMemory(size);
 

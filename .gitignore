@@ -5,3 +5,8 @@ dist-*/
 *.user
 .vs/
 *.replay
+
+# Local replay verification can contain player names, settings and match history.
+docs/verification/
+__pycache__/
+*.py[cod]
