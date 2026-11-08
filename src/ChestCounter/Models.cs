@@ -106,7 +106,13 @@ public sealed class Config
     /// <summary>Minimum delay between two readings of the replay in progress (seconds, 10 minimum).</summary>
     public int LiveIntervalSeconds { get; set; } = 30;
 
-    /// <summary>Absolute paths protected from manual replay cleanup.</summary>
+    /// <summary>Automatically delete eligible old replays after analysis. Off by default.</summary>
+    public bool AutoCleanupReplays { get; set; }
+
+    /// <summary>Minimum number of newest replay files to keep.</summary>
+    public int ReplaysToKeep { get; set; } = 10;
+
+    /// <summary>Absolute paths protected from replay cleanup.</summary>
     public List<string> ProtectedReplayPaths { get; set; } = new();
 }
 

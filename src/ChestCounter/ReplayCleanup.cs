@@ -1,9 +1,10 @@
 using System.Security.Cryptography;
-using Microsoft.VisualBasic.FileIO;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 
 namespace ChestCounter;
 
-/// <summary>Manual, opt-in cleanup. Never changes history or auxiliary files.</summary>
+/// <summary>Opt-in replay cleanup. Never changes history or auxiliary files.</summary>
 public static class ReplayCleanup
 {
     public static List<FileInfo> Candidates(Config config, TrackerData persisted, DateTime now)
@@ -11,7 +12,7 @@ public static class ReplayCleanup
         if (!Directory.Exists(config.DemosFolder)) return new();
         var files = new DirectoryInfo(config.DemosFolder).EnumerateFiles("*.replay", System.IO.SearchOption.TopDirectoryOnly)
             .OrderByDescending(f => f.LastWriteTimeUtc).ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase).ToList();
-        return files.Skip(10).Where(f => Eligible(f, config, persisted, now)).ToList();
+        return files.Skip(Math.Max(10, config.ReplaysToKeep)).Where(f => Eligible(f, config, persisted, now)).ToList();
     }
 
     private static bool Protected(string path, IEnumerable<string> paths)
@@ -44,8 +45,11 @@ public static class ReplayCleanup
             for (var parent = dir; parent != null; parent = parent.Parent)
                 if ((parent.Attributes & FileAttributes.ReparsePoint) != 0) return false;
             var key = Tracker.FileKey(file);
-            if (!persisted.ReplayEvidence.TryGetValue(key, out var evidence) || string.IsNullOrEmpty(evidence.SessionId) ||
-                !persisted.Matches.Any(m => m.SessionId == evidence.SessionId && m.ReplayFile == file.Name && m.IsBattleRoyale)) return false;
+            if (persisted.AnalyzerVersion < ReplayAnalyzer.CurrentVersion ||
+                !persisted.ReplayEvidence.TryGetValue(key, out var evidence) || string.IsNullOrEmpty(evidence.SessionId) ||
+                !persisted.ProcessedFiles.TryGetValue(key, out var session) || session != evidence.SessionId ||
+                !persisted.Matches.Any(m => m.SessionId == evidence.SessionId && m.ReplayFile == file.Name &&
+                    m.IsBattleRoyale && m.AnalyzerVersion >= ReplayAnalyzer.CurrentVersion)) return false;
             if (ReplayHeaderProbe.IsLive(file.FullName) != false || ReplayHeaderProbe.KeyMissing(file.FullName)) return false;
             using var stream = new FileStream(file.FullName, FileMode.Open, FileAccess.Read, FileShare.None);
             var digest = Convert.ToHexString(SHA256.HashData(stream));
@@ -55,16 +59,45 @@ public static class ReplayCleanup
         catch { return false; }
     }
 
-    public static bool Recycle(FileInfo candidate, Config config, TrackerData persisted)
+    // Open with DELETE access and no sharing, then validate and delete through the same handle.
+    // This prevents a replay being opened, replaced or renamed between verification and deletion.
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern SafeFileHandle CreateFileW(string path, uint access, uint share, IntPtr security,
+        uint creation, uint flags, IntPtr template);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetFileInformationByHandle(SafeFileHandle handle, int infoClass,
+        ref FileDispositionInfo info, uint size);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct FileDispositionInfo { [MarshalAs(UnmanagedType.U1)] public bool DeleteFile; }
+
+    public static long DeletePermanent(FileInfo candidate, Config config, TrackerData persisted)
     {
-        if (!OperatingSystem.IsWindows()) return false;
-        // Recompute the protected newest ten and all other checks after confirmation.
-        if (!Candidates(config, persisted, DateTime.UtcNow).Any(f => f.FullName == candidate.FullName)) return false;
+        if (!OperatingSystem.IsWindows()) return 0;
         try
         {
-            FileSystem.DeleteFile(candidate.FullName, UIOption.AllDialogs, RecycleOption.SendToRecycleBin, UICancelOption.ThrowException);
-            return !File.Exists(candidate.FullName);
+            // Preserve the identity presented to the user or selected by the scan.
+            var expectedKey = Tracker.FileKey(candidate);
+            // Refresh both the retention window and the persisted-analysis checks.
+            var current = Candidates(config, persisted, DateTime.UtcNow)
+                .FirstOrDefault(f => string.Equals(f.FullName, candidate.FullName, StringComparison.OrdinalIgnoreCase));
+            if (current == null) return 0;
+            var key = Tracker.FileKey(current);
+            if (key != expectedKey) return 0;
+            var evidence = persisted.ReplayEvidence[key];
+            const uint genericRead = 0x80000000, delete = 0x00010000, openExisting = 3;
+            using var handle = CreateFileW(current.FullName, genericRead | delete, 0, IntPtr.Zero, openExisting, 0, IntPtr.Zero);
+            if (handle.IsInvalid) return 0;
+            using var stream = new FileStream(handle, FileAccess.Read);
+            var digest = Convert.ToHexString(SHA256.HashData(stream));
+            current.Refresh();
+            if (!current.Exists || Tracker.FileKey(current) != key || digest != evidence.Sha256) return 0;
+            var length = stream.Length;
+            var disposition = new FileDispositionInfo { DeleteFile = true };
+            return SetFileInformationByHandle(handle, 4, ref disposition, 1) ? length : 0;
         }
-        catch { return false; }
+        catch { return 0; }
     }
 }

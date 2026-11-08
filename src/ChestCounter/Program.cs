@@ -793,6 +793,8 @@ void Settings()
             $"{L.T("Dossier des replays", "Replays folder", "Carpeta de repeticiones")} : {config.DemosFolder}",
             L.T("Nettoyage manuel des replays", "Review replay cleanup", "Revisar limpieza de repeticiones"),
             L.T("Protéger un fichier ou dossier", "Protect a file or folder", "Proteger un archivo o carpeta"),
+            $"{L.T("Nettoyage automatique", "Automatic cleanup", "Limpieza automática")} : {YesNo(config.AutoCleanupReplays)}",
+            $"{L.T("Replays récents conservés", "Recent replays to keep", "Repeticiones recientes a conservar")} : {Math.Max(10, config.ReplaysToKeep)}",
             L.T("← Retour", "← Back", "← Volver"),
         };
         selected = ConsoleUi.Menu(items, selected, L.T("↑ ↓ pour choisir, Entrée pour modifier", "↑ ↓ to choose, Enter to change", "↑ ↓ para elegir, Intro para cambiar"));
@@ -844,6 +846,24 @@ void Settings()
                 if (!string.IsNullOrWhiteSpace(protectedPath) && Path.IsPathFullyQualified(protectedPath))
                     config.ProtectedReplayPaths.Add(Path.GetFullPath(protectedPath));
                 break;
+            case 10:
+                if (config.AutoCleanupReplays) config.AutoCleanupReplays = false;
+                else
+                {
+                    ConsoleUi.Screen(appName, L.T("nettoyage automatique", "automatic cleanup", "limpieza automática"));
+                    ConsoleUi.Text(L.T("Suppression permanente des anciens replays analysés, y compris ceux sauvegardés manuellement. Ils ne pourront plus être réanalysés.",
+                        "Old analyzed replays will be permanently deleted, including manually saved replays. They cannot be re-analyzed.",
+                        "Las repeticiones antiguas analizadas se eliminarán permanentemente, incluidas las guardadas manualmente. No se podrán volver a analizar."), ConsoleColor.Yellow);
+                    ConsoleUi.Text(L.T("Les fichiers et dossiers protégés, les 10 derniers replays et ceux des 7 derniers jours sont conservés.",
+                        "Protected paths, the latest 10 replays and those from the last 7 days are kept.",
+                        "Se conservan las rutas protegidas, las 10 últimas repeticiones y las de los últimos 7 días."));
+                    config.AutoCleanupReplays = ConsoleUi.Menu(new[] { L.T("Annuler", "Cancel", "Cancelar"), L.T("Activer", "Enable", "Activar") }, 0) == 1;
+                }
+                break;
+            case 11:
+                var keep = ConsoleUi.Input(L.T("Nombre à conserver (minimum 10) : ", "Number to keep (minimum 10): ", "Número a conservar (mínimo 10): "), Math.Max(10, config.ReplaysToKeep).ToString());
+                if (int.TryParse(keep, out var parsedKeep) && parsedKeep >= 10) config.ReplaysToKeep = parsedKeep;
+                break;
             default:
                 store.SaveConfig(config);
                 return;
@@ -855,13 +875,13 @@ void Settings()
 void ReviewCleanup()
 {
     ConsoleUi.Screen(appName, L.T("nettoyage manuel", "manual cleanup", "limpieza manual"));
-    ConsoleUi.Text(L.T("Aucun nettoyage automatique. Vérifie chaque fichier : conserve les replays enregistrés manuellement.",
-        "No automatic cleanup. Review each file and keep manually saved replays.",
-        "No hay limpieza automática. Revisa cada archivo y conserva las repeticiones guardadas manualmente."));
+    ConsoleUi.Text(L.T("Vérifie chaque fichier : conserve les replays enregistrés manuellement.",
+        "Review each file and keep manually saved replays.",
+        "Revisa cada archivo y conserva las repeticiones guardadas manualmente."));
     ConsoleUi.Text(L.T("Les replays supprimés ne pourront plus être réanalysés par les futures versions.",
         "Removed replays cannot be re-analyzed by future versions.",
         "Las repeticiones eliminadas no podrán volver a analizarse en versiones futuras."), ConsoleColor.Yellow);
-    ConsoleUi.Text(L.T("Annule toute demande de suppression definitive de Windows.", "Cancel any Windows prompt to permanently delete a file.", "Cancela cualquier aviso de Windows de eliminacion definitiva."), ConsoleColor.Yellow);
+    ConsoleUi.Text(L.T("La suppression est definitive, sans corbeille.", "Deletion is permanent; files do not go to the Recycle Bin.", "La eliminacion es permanente; los archivos no pasan por la Papelera."), ConsoleColor.Yellow);
     var persisted = store.LoadData();
     var candidates = ReplayCleanup.Candidates(config, persisted, DateTime.UtcNow);
     foreach (var f in candidates) ConsoleUi.Text($"{f.Name}  ({f.Length / 1048576.0:F1} MiB)");
@@ -871,11 +891,11 @@ void ReviewCleanup()
     long recycled = 0;
     foreach (var f in candidates)
     {
-        var choice = ConsoleUi.Menu(new[] { L.T("Conserver", "Keep", "Conservar"), L.T("Confirmer : replay non sauvegardé, envoyer à la corbeille", "Confirm: not manually saved, send to Recycle Bin", "Confirmar: no guardada manualmente, enviar a la Papelera") }, 0,
+        var choice = ConsoleUi.Menu(new[] { L.T("Conserver", "Keep", "Conservar"), L.T("Supprimer definitivement", "Permanently delete", "Eliminar permanentemente") }, 0,
             L.T($"{f.Name} : confirmer", $"{f.Name}: confirm", $"{f.Name}: confirmar"));
-        if (choice == 1 && ReplayCleanup.Recycle(f, config, store.LoadData())) recycled += f.Length;
+        if (choice == 1) recycled += ReplayCleanup.DeletePermanent(f, config, store.LoadData());
     }
-    ConsoleUi.Text(L.T($"Envoyé à la corbeille : {recycled / 1048576.0:F1} MiB", $"Sent to Recycle Bin: {recycled / 1048576.0:F1} MiB", $"Enviado a la Papelera: {recycled / 1048576.0:F1} MiB"));
+    ConsoleUi.Text(L.T($"Espace libere : {recycled / 1048576.0:F1} MiB", $"Space freed: {recycled / 1048576.0:F1} MiB", $"Espacio liberado: {recycled / 1048576.0:F1} MiB"));
     ConsoleUi.WaitEnter(L.T("Entrée pour continuer", "Enter to continue", "Intro para continuar"));
 }
 

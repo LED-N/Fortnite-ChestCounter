@@ -35,13 +35,13 @@ Fortnite can record a **replay file** of every match on your PC. Chest Counter r
 
 Because Fortnite only writes the replay's decryption key when the match ends, chests are counted **a few seconds after each match**, not during it. While you play, the overlay shows **● MATCH IN PROGRESS**.
 
-## Manual replay cleanup
+## Replay cleanup
 
-Automatic cleanup is disabled. In settings (C), choose **Review replay cleanup** to see eligible files and their total size, then decide separately for each file whether to send it to the Windows Recycle Bin. The app cannot determine whether a replay was manually saved: keep any replay you want to preserve. Nothing is selected for removal by default.
+Automatic cleanup is **off by default**. In settings (C), you can enable it after acknowledging the warning. It permanently deletes eligible old analyzed replays, including replays manually saved in Fortnite; they are **not** sent to the Recycle Bin and cannot be re-analyzed or restored. Protect any file or folder you want to keep in the settings before enabling it.
 
-The newest ten replays and all files from the past seven days are kept. A candidate must have successful analysis evidence tied to a persisted match, an unchanged content hash, a complete header and an available exclusive read. Files analyzed before this feature have no evidence and are excluded until successfully re-analyzed. In settings, **Protect a file or folder** adds an absolute path to the protection list; edit `ProtectedReplayPaths` in `config.json` to remove entries. The app does not touch auxiliary files, history or statistics.
+The newest 10 replays (or a larger number chosen in settings) and every replay from the last seven days are retained. Cleanup only considers files with successful analysis evidence tied to a persisted match, an unchanged content hash and a complete replay header. It obtains exclusive access before deleting; files in use or with uncertain evidence are kept. Replays analyzed before this feature are excluded until successfully re-analyzed. Cleanup never changes history, statistics or auxiliary files.
 
-Removed replays cannot be re-analyzed by future versions unless restored from the Recycle Bin. Sending files to the bin does not free disk space until it is emptied. Cancel any Windows prompt asking for permanent deletion.
+The manual review screen shows candidates and their potential size, and asks separately before permanently deleting each file. After cleanup the tool reports the size deleted. To remove a protected path, edit `ProtectedReplayPaths` in `config.json`.
 
 ## Getting started
 

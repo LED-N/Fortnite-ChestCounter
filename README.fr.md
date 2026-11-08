@@ -35,11 +35,13 @@ Fortnite peut enregistrer un **fichier replay** de chaque partie sur ton PC. Che
 
 Comme Fortnite n'écrit la clé de déchiffrement du replay qu'à la fin de la partie, les coffres sont comptés **quelques secondes après chaque partie**, pas pendant. Pendant que tu joues, l'overlay affiche **● PARTIE EN COURS**.
 
-## Nettoyage manuel des replays
+## Nettoyage des replays
 
-Aucun nettoyage automatique. Dans les réglages (C), la liste indique les fichiers et leur taille, puis demande une confirmation distincte pour chaque envoi à la corbeille Windows. L’application ne peut pas identifier les replays sauvegardés manuellement : conserve ceux que tu souhaites garder. Les dix plus récents et ceux des sept derniers jours sont conservés. Seuls les fichiers analysés avec succès, liés à une partie enregistrée et inchangés peuvent être proposés. Les anciennes analyses sans preuve sont exclues jusqu’à leur réanalyse.
+Le nettoyage automatique est **désactivé par défaut**. Dans les réglages (C), il peut être activé après confirmation de l’avertissement. Les anciens replays analysés sont supprimés définitivement, y compris ceux sauvegardés manuellement dans Fortnite : ils ne vont pas dans la corbeille et ne pourront pas être restaurés ou réanalysés. Protège les fichiers et dossiers à conserver avant l’activation.
 
-Les réglages permettent de protéger un fichier ou dossier par son chemin absolu ; pour retirer une protection, modifie `ProtectedReplayPaths` dans `config.json`. L’historique, les statistiques et les fichiers auxiliaires restent intacts. Les replays supprimés ne pourront pas être réanalysés par une future version sans restauration. La corbeille doit être vidée pour libérer l’espace ; annule toute demande Windows de suppression définitive.
+Les 10 replays les plus récents (ou davantage selon le réglage) et tous ceux des sept derniers jours sont conservés. Seuls les fichiers complets et inchangés, liés à une analyse réussie et à une partie enregistrée, peuvent être supprimés après obtention d’un accès exclusif. Les anciennes analyses sans preuve sont exclues jusqu’à leur réanalyse. L’historique, les statistiques et les fichiers auxiliaires restent intacts.
+
+La revue manuelle affiche les candidats et leur taille, puis demande une confirmation par fichier avant suppression définitive. Après le nettoyage, l’espace libéré est affiché. Pour retirer une protection, modifie `ProtectedReplayPaths` dans `config.json`.
 
 ## Pour commencer
 

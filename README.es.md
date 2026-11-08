@@ -35,11 +35,13 @@ Fortnite puede grabar un **archivo de repetición** de cada partida en tu PC. Ch
 
 Como Fortnite solo escribe la clave de descifrado de la repetición al final de la partida, los cofres se cuentan **unos segundos después de cada partida**, no durante. Mientras juegas, el overlay muestra **● PARTIDA EN CURSO**.
 
-## Limpieza manual de repeticiones
+## Limpieza de repeticiones
 
-No hay limpieza automática. En los ajustes (C), la lista muestra los archivos y su tamaño y pide una confirmación independiente para enviar cada uno a la Papelera de Windows. La aplicación no puede identificar las repeticiones guardadas manualmente: conserva las que quieras guardar. Se conservan las diez más recientes y todas las de los últimos siete días. Solo se ofrecen archivos con pruebas de análisis correcto, vinculados a una partida guardada y sin cambios. Los análisis antiguos sin pruebas quedan excluidos hasta que se analicen de nuevo.
+La limpieza automática está **desactivada por defecto**. Puedes activarla en ajustes (C) tras aceptar el aviso. Elimina permanentemente las repeticiones antiguas analizadas, incluidas las guardadas manualmente en Fortnite: no pasan por la Papelera y no podrán restaurarse ni volver a analizarse. Protege los archivos y carpetas que quieras conservar antes de activarla.
 
-En ajustes puedes proteger un archivo o carpeta mediante su ruta absoluta; para retirar una protección, edita `ProtectedReplayPaths` en `config.json`. El historial, las estadísticas y los archivos auxiliares permanecen intactos. Las repeticiones eliminadas no podrán volver a analizarse en futuras versiones sin restaurarlas. Hay que vaciar la Papelera para liberar espacio; cancela cualquier aviso de Windows de eliminación definitiva.
+Se conservan las 10 repeticiones más recientes (o más, según el ajuste) y todas las de los últimos siete días. Solo se pueden eliminar archivos completos y sin cambios, vinculados a una prueba de análisis correcto y a una partida guardada, tras obtener acceso exclusivo. Los análisis antiguos sin pruebas quedan excluidos hasta volver a analizarse. El historial, las estadísticas y los archivos auxiliares permanecen intactos.
+
+La revisión manual muestra los candidatos y su tamaño y pide confirmación por archivo antes de eliminarlos permanentemente. Después de la limpieza se muestra el espacio liberado. Para retirar una protección, edita `ProtectedReplayPaths` en `config.json`.
 
 ## Primeros pasos
 
