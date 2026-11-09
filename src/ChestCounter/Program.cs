@@ -1236,34 +1236,113 @@ void AnnounceNewProfiles()
 {
     if (!tracker.NewProfilesFound)
     {
-        return;
-    }
-    tracker.NewProfilesFound = false;
-    Console.ForegroundColor = ConsoleColor.DarkYellow;
-    Console.WriteLine(L.T("Plusieurs comptes Fortnite ont enregistré des replays sur ce PC : chacun a son profil. « Changer de profil » dans l'accueil pour choisir le tien.",
-        "Several Fortnite accounts recorded replays on this PC: each one has its own profile. \"Switch profile\" on the home tab to choose yours.",
-        "Varias cuentas de Fortnite grabaron repeticiones en este PC: cada una tiene su perfil. «Cambiar de perfil» en el inicio para elegir el tuyo."));
-    Console.ResetColor();
-}
-
-// Replays folder: Windows tells us when a file changes, instead of us re-reading the folder all the time.
-void WatchReplays()
-{
-    watcher?.Dispose();
-    watcher = null;
-    try
-    {
-        if (Directory.Exists(config.DemosFolder))
+        ConsoleUi.Screen(appName, L.T("réglages", "settings", "ajustes"));
+        string YesNo(bool b) => b ? L.T("oui", "yes", "sí") : L.T("non", "no", "no");
+        var updates = config.UpdateMode switch
         {
-            var w = new FileSystemWatcher(config.DemosFolder, "*.replay")
-            {
-                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
-                EnableRaisingEvents = true,
-            };
-            w.Created += (_, _) => { watcherFired = true; wake.Set(); };
-            w.Changed += (_, _) => { watcherFired = true; wake.Set(); };
-            w.Renamed += (_, _) => { watcherFired = true; wake.Set(); };
-            watcher = w;
+            "auto" => L.T("installées automatiquement", "installed automatically", "instaladas automáticamente"),
+            "off" => L.T("désactivées", "off", "desactivadas"),
+            _ => L.T("proposées", "offered", "propuestas"),
+        };
+        ConsoleUi.Hint(L.T("Ouvrir avec Fortnite : un petit processus invisible attend Fortnite et ouvre le compteur, qui se ferme après.",
+            "Open with Fortnite: a tiny invisible process waits for Fortnite and opens the counter, which closes afterwards.",
+            "Abrir con Fortnite: un pequeño proceso invisible espera a Fortnite y abre el contador, que se cierra después."));
+        ConsoleUi.Hint(L.T("Mises à jour : vérifiées sur GitHub au démarrage et avec U (le seul accès réseau de l'outil).",
+            "Updates: checked on GitHub at startup and with U (the only network access of the tool).",
+            "Actualizaciones: se comprueban en GitHub al iniciar y con U (único acceso a la red)."));
+        ConsoleUi.Hint(L.T("Overlay et rapport au démarrage : pris en compte au prochain lancement.",
+            "Overlay and report at startup: applied at the next launch.",
+            "Overlay e informe al iniciar: se aplican en el próximo inicio."));
+        ConsoleUi.Hint(L.T("Taille et opacité de l'overlay : appliquées tout de suite (Entrée pour passer à la valeur suivante).",
+            "Overlay size and opacity: applied at once (Enter for the next value).",
+            "Tamaño y opacidad del overlay: se aplican al instante (Intro para pasar al valor siguiente)."));
+        string Percent(int p) => L.T($"{p} %", $"{p}%", $"{p} %");
+        var items = new List<string>
+        {
+            $"{L.T("Langue", "Language", "Idioma")} : {L.NativeName(L.Code)}",
+            $"{L.T("Ouvrir avec Fortnite", "Open with Fortnite", "Abrir con Fortnite")} : {YesNo(config.StartWithFortnite)}",
+            $"{L.T("Mises à jour", "Updates", "Actualizaciones")} : {updates}",
+            $"{L.T("Overlay au démarrage", "Overlay at startup", "Overlay al iniciar")} : {YesNo(config.ShowOverlay)}",
+            $"{L.T("Taille de l'overlay", "Overlay size", "Tamaño del overlay")} : {Percent(config.OverlaySize)}",
+            $"{L.T("Opacité de l'overlay", "Overlay opacity", "Opacidad del overlay")} : {Percent(config.OverlayOpacity)}",
+            $"{L.T("Ouvrir le rapport au démarrage", "Open the report at startup", "Abrir el informe al iniciar")} : {YesNo(config.OpenReportOnStart)}",
+            $"{L.T("Dossier des replays", "Replays folder", "Carpeta de repeticiones")} : {config.DemosFolder}",
+            L.T("Nettoyage manuel des replays", "Review replay cleanup", "Revisar limpieza de repeticiones"),
+            L.T("Protéger un fichier ou dossier", "Protect a file or folder", "Proteger un archivo o carpeta"),
+            $"{L.T("Nettoyage automatique", "Automatic cleanup", "Limpieza automática")} : {YesNo(config.AutoCleanupReplays)}",
+            $"{L.T("Replays récents conservés", "Recent replays to keep", "Repeticiones recientes a conservar")} : {Math.Max(10, config.ReplaysToKeep)}",
+            L.T("← Retour", "← Back", "← Volver"),
+        };
+        selected = ConsoleUi.Menu(items, selected, L.T("↑ ↓ pour choisir, Entrée pour modifier", "↑ ↓ to choose, Enter to change", "↑ ↓ para elegir, Intro para cambiar"));
+        switch (selected)
+        {
+            case 0:
+                config.Language = L.Codes[(Array.IndexOf(L.Codes, L.Code) + 1) % L.Codes.Length]; // fr → en → es → fr
+                L.Set(config.Language);
+                appName = L.T("Compteur de coffres Fortnite", "Fortnite Chest Counter", "Contador de cofres de Fortnite");
+                ConsoleUi.SetTitle($"{appName} {AppInfo.VersionText}");
+                break;
+            case 1:
+                var on = !config.StartWithFortnite;
+                if (OperatingSystem.IsWindows() && FortniteWatch.Apply(on, dataDir))
+                {
+                    config.StartWithFortnite = on;
+                }
+                else
+                {
+                    ConsoleUi.Text(L.T("Impossible ici : lance le compteur depuis ChestCounter.exe.", "Not possible here: run the counter from ChestCounter.exe.", "No es posible aquí: abre el contador desde ChestCounter.exe."), ConsoleColor.Red);
+                    ConsoleUi.WaitEnter(L.T("Entrée pour continuer", "Enter to continue", "Intro para continuar"));
+                }
+                break;
+            case 2:
+                config.UpdateMode = config.UpdateMode switch { "prompt" => "auto", "auto" => "off", _ => "prompt" };
+                break;
+            case 3:
+                config.ShowOverlay = !config.ShowOverlay;
+                break;
+            case 4:
+                config.OverlaySize = OverlayAppearance.Next(OverlayAppearance.Sizes, config.OverlaySize);
+                ApplyOverlayAppearance();
+                break;
+            case 5:
+                config.OverlayOpacity = OverlayAppearance.Next(OverlayAppearance.Opacities, config.OverlayOpacity);
+                ApplyOverlayAppearance();
+                break;
+            case 6:
+                config.OpenReportOnStart = !config.OpenReportOnStart;
+                break;
+            case 7:
+                config.DemosFolder = ConsoleUi.Input(L.T("Nouveau dossier (Entrée = inchangé) : ", "New folder (Enter = unchanged): ", "Nueva carpeta (Intro = sin cambios): "), config.DemosFolder);
+                break;
+            case 8:
+                ReviewCleanup();
+                break;
+            case 9:
+                var protectedPath = ConsoleUi.Input(L.T("Chemin complet à protéger : ", "Full path to protect: ", "Ruta completa para proteger: "));
+                if (!string.IsNullOrWhiteSpace(protectedPath) && Path.IsPathFullyQualified(protectedPath))
+                    config.ProtectedReplayPaths.Add(Path.GetFullPath(protectedPath));
+                break;
+            case 10:
+                if (config.AutoCleanupReplays) config.AutoCleanupReplays = false;
+                else
+                {
+                    ConsoleUi.Screen(appName, L.T("nettoyage automatique", "automatic cleanup", "limpieza automática"));
+                    ConsoleUi.Text(L.T("Suppression permanente des anciens replays analysés, y compris ceux sauvegardés manuellement. Ils ne pourront plus être réanalysés.",
+                        "Old analyzed replays will be permanently deleted, including manually saved replays. They cannot be re-analyzed.",
+                        "Las repeticiones antiguas analizadas se eliminarán permanentemente, incluidas las guardadas manualmente. No se podrán volver a analizar."), ConsoleColor.Yellow);
+                    ConsoleUi.Text(L.T("Les fichiers et dossiers protégés, les 10 derniers replays et ceux des 7 derniers jours sont conservés.",
+                        "Protected paths, the latest 10 replays and those from the last 7 days are kept.",
+                        "Se conservan las rutas protegidas, las 10 últimas repeticiones y las de los últimos 7 días."));
+                    config.AutoCleanupReplays = ConsoleUi.Menu(new[] { L.T("Annuler", "Cancel", "Cancelar"), L.T("Activer", "Enable", "Activar") }, 0) == 1;
+                }
+                break;
+            case 11:
+                var keep = ConsoleUi.Input(L.T("Nombre à conserver (minimum 10) : ", "Number to keep (minimum 10): ", "Número a conservar (mínimo 10): "), Math.Max(10, config.ReplaysToKeep).ToString());
+                if (int.TryParse(keep, out var parsedKeep) && parsedKeep >= 10) config.ReplaysToKeep = parsedKeep;
+                break;
+            default:
+                store.SaveConfig(config);
+                return;
         }
     }
     catch
@@ -1296,6 +1375,33 @@ void CheckAutoClose()
     {
         quit = true;
     }
+}
+
+void ReviewCleanup()
+{
+    ConsoleUi.Screen(appName, L.T("nettoyage manuel", "manual cleanup", "limpieza manual"));
+    ConsoleUi.Text(L.T("Vérifie chaque fichier : conserve les replays enregistrés manuellement.",
+        "Review each file and keep manually saved replays.",
+        "Revisa cada archivo y conserva las repeticiones guardadas manualmente."));
+    ConsoleUi.Text(L.T("Les replays supprimés ne pourront plus être réanalysés par les futures versions.",
+        "Removed replays cannot be re-analyzed by future versions.",
+        "Las repeticiones eliminadas no podrán volver a analizarse en versiones futuras."), ConsoleColor.Yellow);
+    ConsoleUi.Text(L.T("La suppression est definitive, sans corbeille.", "Deletion is permanent; files do not go to the Recycle Bin.", "La eliminacion es permanente; los archivos no pasan por la Papelera."), ConsoleColor.Yellow);
+    var persisted = store.LoadData();
+    var candidates = ReplayCleanup.Candidates(config, persisted, DateTime.UtcNow);
+    foreach (var f in candidates) ConsoleUi.Text($"{f.Name}  ({f.Length / 1048576.0:F1} MiB)");
+    ConsoleUi.Text(L.T($"À examiner : {candidates.Count} ; espace potentiel : {candidates.Sum(f => f.Length) / 1048576.0:F1} MiB",
+        $"To review: {candidates.Count}; potential space: {candidates.Sum(f => f.Length) / 1048576.0:F1} MiB",
+        $"Para revisar: {candidates.Count}; espacio posible: {candidates.Sum(f => f.Length) / 1048576.0:F1} MiB"));
+    long recycled = 0;
+    foreach (var f in candidates)
+    {
+        var choice = ConsoleUi.Menu(new[] { L.T("Conserver", "Keep", "Conservar"), L.T("Supprimer definitivement", "Permanently delete", "Eliminar permanentemente") }, 0,
+            L.T($"{f.Name} : confirmer", $"{f.Name}: confirm", $"{f.Name}: confirmar"));
+        if (choice == 1) recycled += ReplayCleanup.DeletePermanent(f, config, store.LoadData());
+    }
+    ConsoleUi.Text(L.T($"Espace libere : {recycled / 1048576.0:F1} MiB", $"Space freed: {recycled / 1048576.0:F1} MiB", $"Espacio liberado: {recycled / 1048576.0:F1} MiB"));
+    ConsoleUi.WaitEnter(L.T("Entrée pour continuer", "Enter to continue", "Intro para continuar"));
 }
 
 // Shows the new size / opacity on the overlay right away (it stays visible above the console).

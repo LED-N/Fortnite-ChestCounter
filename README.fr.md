@@ -24,9 +24,9 @@ Chest Counter lit les replays que Fortnite enregistre après chaque partie et ti
 
 ## Comment ça marche (et pourquoi c'est sans risque)
 
-Fortnite peut enregistrer un **fichier replay** de chaque partie sur ton PC. Chest Counter lit ces fichiers une fois la partie terminée, et rien d'autre.
+Fortnite peut enregistrer un **fichier replay** de chaque partie sur ton PC. Chest Counter lit ces fichiers une fois la partie terminée.
 
-- ✅ **Lit uniquement les replays** : les fichiers `.replay` que Fortnite écrit dans `%LOCALAPPDATA%\FortniteGame\Saved\Demos`. Ils sont ouverts en lecture seule et jamais modifiés.
+- ✅ **Lit uniquement les replays** : les fichiers `.replay` que Fortnite écrit dans `%LOCALAPPDATA%\FortniteGame\Saved\Demos`. Ils sont ouverts en lecture seule pour l’analyse.
 - ✅ **Aucune modification du jeu** : rien n'est touché dans le dossier d'installation de Fortnite, aucun fichier n'est ajouté ni modifié.
 - ✅ **Aucun accès à la mémoire du jeu** : l'outil ne lit, n'écrit et n'injecte jamais rien dans le processus de Fortnite. Il n'interagit pas du tout avec le jeu en cours.
 - ✅ **Aucune donnée envoyée** : pas de connexion, pas d'accès à ton compte Epic, pas de télémétrie. Le seul accès réseau est la vérification d'une nouvelle version sur GitHub, désactivable dans les réglages.
@@ -36,6 +36,14 @@ Fortnite peut enregistrer un **fichier replay** de chaque partie sur ton PC. Che
 > **Les replays (« rediffusions » dans Fortnite) doivent être activés** : *Paramètres → Jeu → Rediffusions → Enregistrer les rediffusions : **Activé***. Sans replays, l'outil n'a rien à lire.
 
 Comme Fortnite n'écrit la clé de déchiffrement du replay qu'à la fin de la partie, les coffres sont comptés **quelques secondes après chaque partie**, pas pendant. Pendant que tu joues, l'overlay affiche **● En partie**.
+
+## Nettoyage des replays
+
+Le nettoyage automatique est **désactivé par défaut**. Dans les réglages (C), il peut être activé après confirmation de l’avertissement. Les anciens replays analysés sont supprimés définitivement, y compris ceux sauvegardés manuellement dans Fortnite : ils ne vont pas dans la corbeille et ne pourront pas être restaurés ou réanalysés. Protège les fichiers et dossiers à conserver avant l’activation.
+
+Les 10 replays les plus récents (ou davantage selon le réglage) et tous ceux des sept derniers jours sont conservés. Seuls les fichiers complets et inchangés, liés à une analyse réussie et à une partie enregistrée, peuvent être supprimés après obtention d’un accès exclusif. Les anciennes analyses sans preuve sont exclues jusqu’à leur réanalyse. L’historique, les statistiques et les fichiers auxiliaires restent intacts.
+
+La revue manuelle affiche les candidats et leur taille, puis demande une confirmation par fichier avant suppression définitive. Après le nettoyage, l’espace libéré est affiché. Pour retirer une protection, modifie `ProtectedReplayPaths` dans `config.json`.
 
 ## Pour commencer
 

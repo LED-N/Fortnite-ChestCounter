@@ -24,20 +24,28 @@ Chest Counter lee las repeticiones que Fortnite guarda después de cada partida 
 
 ## Cómo funciona (y por qué es seguro)
 
-Fortnite puede grabar un **archivo de repetición** de cada partida en tu PC. Chest Counter lee esos archivos cuando termina la partida, y nada más.
+Fortnite puede grabar un **archivo de repetición** de cada partida en tu PC. Chest Counter lee esos archivos cuando termina la partida.
 
-- ✅ **Solo lee archivos de repetición**: los archivos `.replay` que Fortnite escribe en `%LOCALAPPDATA%\FortniteGame\Saved\Demos`. Se abren en solo lectura y nunca se modifican.
-- ✅ **Ninguna modificación del juego**: no se toca nada en la carpeta de instalación de Fortnite, no se añade ni se cambia ningún archivo.
-- ✅ **Ningún acceso a la memoria del juego**: la herramienta nunca lee, escribe ni inyecta nada en el proceso de Fortnite. No interactúa en absoluto con el juego en curso.
-- ✅ **No se envía ningún dato**: sin inicio de sesión, sin acceso a tu cuenta de Epic, sin telemetría. Su único acceso a la red es la comprobación de una nueva versión en GitHub, que se puede desactivar en los ajustes.
-- ✅ **Ligero**: funciona con prioridad baja (y en «modo de eficiencia» en Windows 11), duerme entre partidas, y el overlay solo se redibuja cuando cambia una cifra.
+- ✅ **Solo lee archivos de repetición**: los archivos `.replay` que Fortnite escribe en `%LOCALAPPDATA%\FortniteGame\Saved\Demos`. Se abren en solo lectura para el análisis.
+- ✅ **Ninguna modificación del juego**: no se toca nada de la carpeta de instalación de Fortnite, no se añade ni se parchea ningún archivo.
+- ✅ **Ningún acceso a la memoria del juego**: la herramienta nunca lee, escribe ni inyecta nada en el proceso de Fortnite. No interactúa en absoluto con el juego en marcha.
+- ✅ **No se envía ningún dato**: sin inicio de sesión, sin acceso a tu cuenta de Epic, sin telemetría. El único acceso a la red es la comprobación de una nueva versión en GitHub, que se puede desactivar en los ajustes.
+- ✅ **Ligero**: funciona con prioridad baja (y en «modo de eficiencia» en Windows 11), duerme entre partidas, y el overlay solo se redibuja cuando cambia un número.
 
 > [!IMPORTANT]
 > **Las repeticiones deben estar activadas en Fortnite**: *Ajustes → Juego → Repeticiones → Grabar repeticiones: **Activado***. Sin repeticiones, la herramienta no tiene nada que leer.
 
 Como Fortnite solo escribe la clave de descifrado de la repetición al final de la partida, los cofres se cuentan **unos segundos después de cada partida**, no durante ella. Mientras juegas, el overlay muestra **● En partida**.
 
-## Para empezar
+## Limpieza de repeticiones
+
+La limpieza automática está **desactivada por defecto**. Puedes activarla en ajustes (C) tras aceptar el aviso. Elimina permanentemente las repeticiones antiguas analizadas, incluidas las guardadas manualmente en Fortnite: no pasan por la Papelera y no podrán restaurarse ni volver a analizarse. Protege los archivos y carpetas que quieras conservar antes de activarla.
+
+Se conservan las 10 repeticiones más recientes (o más, según el ajuste) y todas las de los últimos siete días. Solo se pueden eliminar archivos completos y sin cambios, vinculados a una prueba de análisis correcto y a una partida guardada, tras obtener acceso exclusivo. Los análisis antiguos sin pruebas quedan excluidos hasta volver a analizarse. El historial, las estadísticas y los archivos auxiliares permanecen intactos.
+
+La revisión manual muestra los candidatos y su tamaño y pide confirmación por archivo antes de eliminarlos permanentemente. Después de la limpieza se muestra el espacio liberado. Para retirar una protección, edita `ProtectedReplayPaths` en `config.json`.
+
+## Primeros pasos
 
 1. Descarga **[`ChestCounter.exe`](../../releases/latest)**. Con este único archivo basta.
 2. Activa las repeticiones en Fortnite (ver arriba).

@@ -26,6 +26,7 @@ public sealed class Tracker
     private readonly Config _config;
     private readonly TrackerData _data;
     private readonly Dictionary<string, long> _lastSeenSize = new();
+    private DateTime _nextCleanupUtc;
 
     public Tracker(Store store, Config config, TrackerData data)
     {
@@ -111,6 +112,7 @@ public sealed class Tracker
         }
         if (ready.Count == 0)
         {
+            RunCleanup();
             return 0;
         }
 
@@ -163,7 +165,26 @@ public sealed class Tracker
         {
             ReportWriter.WriteAll(_store, _config, _data);
         }
+        RunCleanup();
         return added;
+    }
+
+    private void RunCleanup()
+    {
+        if (!_config.AutoCleanupReplays || !OperatingSystem.IsWindows() || DateTime.UtcNow < _nextCleanupUtc) return;
+        _nextCleanupUtc = DateTime.UtcNow.AddMinutes(1);
+        try
+        {
+            var persisted = _store.LoadData();
+            long bytes = 0;
+            foreach (var file in ReplayCleanup.Candidates(_config, persisted, DateTime.UtcNow))
+                bytes += ReplayCleanup.DeletePermanent(file, _config, persisted);
+            if (bytes > 0)
+                Console.WriteLine(L.T($"  Nettoyage : {bytes / 1048576.0:F1} Mio liberes.",
+                    $"  Cleanup: {bytes / 1048576.0:F1} MiB freed.",
+                    $"  Limpieza: {bytes / 1048576.0:F1} MiB liberados."));
+        }
+        catch (Exception ex) { ErrorLog.Write("Replay cleanup failed", ex); }
     }
 
     /// <summary>Set when a scan found replays of a second account: the player should choose their profile.</summary>
@@ -220,9 +241,10 @@ public sealed class Tracker
         }
 
         MatchRecord record;
+        string digest;
         try
         {
-            record = Analyze(file, ParseTimeout);
+            record = Analyze(file, ParseTimeout, out digest);
         }
         catch (Exception ex)
         {
@@ -260,6 +282,9 @@ public sealed class Tracker
         }
 
         _data.Matches.Add(record);
+        file.Refresh();
+        if (file.Exists && FileKey(file) == key)
+            _data.ReplayEvidence[key] = new ReplayEvidence { SessionId = record.SessionId, Sha256 = digest };
         _data.ProcessedFiles[key] = record.SessionId;
         _store.SaveData(_data);
         if (_liveFile == file.FullName)
@@ -356,7 +381,9 @@ public sealed class Tracker
     }
 
     /// <summary>Reads the file (even while Fortnite writes it) and parses it on a lowest-priority background thread.</summary>
-    private MatchRecord Analyze(FileInfo file, TimeSpan timeout)
+    private MatchRecord Analyze(FileInfo file, TimeSpan timeout) => Analyze(file, timeout, out _);
+
+    private MatchRecord Analyze(FileInfo file, TimeSpan timeout, out string digest)
     {
         byte[] bytes;
         using (var fs = new FileStream(file.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
@@ -365,6 +392,7 @@ public sealed class Tracker
             fs.ReadExactly(bytes);
         }
 
+        digest = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
         MatchRecord? result = null;
         Exception? failure = null;
         var worker = new Thread(() =>

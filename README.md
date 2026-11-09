@@ -24,10 +24,10 @@ Chest Counter reads the replays Fortnite saves after each match and keeps a runn
 
 ## How it works (and why it is safe)
 
-Fortnite can record a **replay file** of every match on your PC. Chest Counter reads these files once the match is over, and nothing else.
+Fortnite can record a **replay file** of every match on your PC. Chest Counter reads these files once the match is over.
 
-- ✅ **Only reads replay files**: the `.replay` files Fortnite writes to `%LOCALAPPDATA%\FortniteGame\Saved\Demos`. They are opened read-only and never modified.
-- ✅ **No game modification**: nothing in the Fortnite install folder is touched, no file is added or changed.
+- ✅ **Only reads replay files**: the `.replay` files Fortnite writes to `%LOCALAPPDATA%\FortniteGame\Saved\Demos`. They are opened read-only for analysis.
+- ✅ **No game modification**: nothing in the Fortnite installation folder is touched, no file is added or patched.
 - ✅ **No access to the game's memory**: the tool never reads, writes or injects anything into the Fortnite process. It does not interact with the running game at all.
 - ✅ **No data sent**: no login, no access to your Epic account, no telemetry. Its only network access is the check for a new version on GitHub, which can be turned off in the settings.
 - ✅ **Lightweight**: runs at low priority (and in "efficiency mode" on Windows 11), sleeps between matches, and the overlay is only redrawn when a number changes.
@@ -36,6 +36,14 @@ Fortnite can record a **replay file** of every match on your PC. Chest Counter r
 > **Replays must be turned on in Fortnite**: *Settings → Game → Replays → Record Replays: **On***. Without replays, the tool has nothing to read.
 
 Because Fortnite only writes the replay's decryption key when the match ends, chests are counted **a few seconds after each match**, not during it. While you play, the overlay shows **● In a match**.
+
+## Replay cleanup
+
+Automatic cleanup is **off by default**. In settings (C), you can enable it after acknowledging the warning. It permanently deletes eligible old analyzed replays, including replays manually saved in Fortnite; they are **not** sent to the Recycle Bin and cannot be re-analyzed or restored. Protect any file or folder you want to keep in the settings before enabling it.
+
+The newest 10 replays (or a larger number chosen in settings) and every replay from the last seven days are retained. Cleanup only considers files with successful analysis evidence tied to a persisted match, an unchanged content hash and a complete replay header. It obtains exclusive access before deleting; files in use or with uncertain evidence are kept. Replays analyzed before this feature are excluded until successfully re-analyzed. Cleanup never changes history, statistics or auxiliary files.
+
+The manual review screen shows candidates and their potential size, and asks separately before permanently deleting each file. After cleanup the tool reports the size deleted. To remove a protected path, edit `ProtectedReplayPaths` in `config.json`.
 
 ## Getting started
 
