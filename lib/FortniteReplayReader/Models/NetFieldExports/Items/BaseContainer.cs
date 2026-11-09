@@ -56,13 +56,13 @@ public abstract class BaseContainer : INetFieldExportGroup
     public uint? SearchingPawn { get; set; }
 
     [NetFieldExport("bAlreadySearched", RepLayoutCmdType.PropertyBool)]
-    public bool bAlreadySearched { get; set; }
+    public bool? bAlreadySearched { get; set; }
 
     [NetFieldExport("BounceNormal", RepLayoutCmdType.PropertyVector)]
     public FVector BounceNormal { get; set; }
 
     [NetFieldExport("SearchAnimationCount", RepLayoutCmdType.PropertyUInt32)]
-    public uint SearchAnimationCount { get; set; }
+    public uint? SearchAnimationCount { get; set; }
 
     [NetFieldExport("ChosenRandomUpgrade", RepLayoutCmdType.PropertyInt)]
     public int? ChosenRandomUpgrade { get; set; }
