@@ -73,6 +73,7 @@ Todo funciona con las **flechas** e **Intro**, sin teclas que recordar. **← �
 | Idioma | Francés, inglés o español. |
 | Overlay en el juego | Activado o desactivado (ni ventana ni atajos: todo queda en el informe). |
 | Estilo, tamaño y opacidad del overlay | HUD o clásico, del 70 al 175 %, del 100 al 30 % de opacidad. Se aplican al instante. |
+| Cofres no contados | Cofres de partidas cuya repetición ya no está. Intro los estima por tu número de partidas, o toma un número de cofres. |
 | Minimizar al área de notificación | Sí: al minimizar el contador se coloca junto al reloj en lugar de la barra de tareas. |
 | Abrir el informe al iniciar | Abre el informe cada vez que se inicia el contador. |
 | Abrir con Fortnite | Ver abajo. |
@@ -145,6 +146,8 @@ Para empezar de cero: **Ajustes → Repetir la configuración** (tu historial se
 **¿Se cuentan las cajas de munición?** No. Las cajas de munición, las cajas de comida y los cañones de botín se muestran aparte en el informe y no forman parte del total de cofres. Los cofres que **destruyes** en lugar de abrirlos sí se cuentan. Un cofre que se rellena durante la partida y que vuelves a abrir cuenta una vez más; volver a pasar cerca de un cofre ya abierto (cofre enterrado desenterrado, cofre de espíritu) no lo cuenta dos veces.
 
 **¿Y los modos creativos?** Solo se cuentan las partidas de Battle Royale; los demás modos se ignoran.
+
+**Faltan partidas en mi total.** Fortnite borra las repeticiones antiguas, y una partida jugada con el contador cerrado nunca se analiza. Añade sus cofres en **Ajustes → Cofres no contados**.
 
 **Fortnite se cerró en mitad de una partida.** Su repetición está incompleta (Fortnite nunca escribió la clave de descifrado): esa partida no se puede contar, y la herramienta la indica como «repetición incompleta».
 

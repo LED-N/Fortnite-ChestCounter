@@ -73,6 +73,7 @@ Everything works with the **arrow keys** and **Enter**, with no key to remember.
 | Language | French, English or Spanish. |
 | In-game overlay | On or off (no window and no shortcut: everything stays in the report). |
 | Overlay style, size, opacity | HUD or classic, 70 to 175%, 100 to 30% opacity. Applied at once. |
+| Chests not counted | Chests of matches with no replay left. Enter estimates them from your match count, or takes a chest count. |
 | Minimize to the notification area | Yes: minimizing the counter puts it next to the clock instead of the taskbar. |
 | Open the report at startup | Opens the report each time the counter starts. |
 | Open with Fortnite | See below. |
@@ -145,6 +146,8 @@ To start over: **Settings → Start the setup again** (your history is kept), or
 **Are ammo boxes counted?** No. Ammo boxes, food boxes and loot cannons are listed separately in the report and are not part of the chest total. Chests you **destroy** instead of opening are counted. A chest that is refilled during the match and that you open again counts once more; coming back near a chest you already opened (dug-up buried chest, sprite chest) does not count it twice.
 
 **Creative modes?** Only Battle Royale matches are counted; other modes are skipped.
+
+**Some matches are missing from my total.** Fortnite deletes old replays, and a match played while the counter was closed is never analyzed. Add their chests in **Settings → Chests not counted**.
 
 **Fortnite closed in the middle of a match.** Its replay is incomplete (Fortnite never wrote the decryption key): that match cannot be counted, and the tool shows it as an "incomplete replay".
 

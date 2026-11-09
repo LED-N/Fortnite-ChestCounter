@@ -73,6 +73,7 @@ Tout se fait avec les **flèches** et **Entrée**, sans touche à retenir. **←
 | Langue | Français, anglais ou espagnol. |
 | Overlay en jeu | Activé ou désactivé (aucune fenêtre ni raccourci : tout reste dans le rapport). |
 | Style, taille, opacité de l'overlay | HUD ou classique, de 70 à 175 %, de 100 à 30 % d'opacité. Appliqués tout de suite. |
+| Coffres non comptés | Coffres des parties dont le replay a disparu. Entrée les estime d'après ton nombre de parties, ou prend un nombre de coffres. |
 | Réduire dans la zone de notification | Oui : réduire le compteur le range à côté de l'horloge au lieu de la barre des tâches. |
 | Ouvrir le rapport au démarrage | Ouvre le rapport à chaque lancement. |
 | Ouvrir avec Fortnite | Voir ci-dessous. |
@@ -145,6 +146,8 @@ Pour tout recommencer : **Réglages → Recommencer la configuration** (ton hist
 **Les caisses de munitions sont-elles comptées ?** Non. Caisses de munitions, de nourriture et canons à butin sont listés à part dans le rapport et n'entrent pas dans le total. Les coffres que tu **détruis** au lieu de les ouvrir sont comptés. Un coffre qui se remplit à nouveau pendant la partie et que tu rouvres compte une fois de plus ; repasser près d'un coffre déjà ouvert (coffre enterré creusé, coffre d'esprit) ne le compte pas deux fois.
 
 **Et les modes créatifs ?** Seules les parties Battle Royale sont comptées ; les autres modes sont ignorés.
+
+**Il manque des parties dans mon total.** Fortnite efface les anciens replays, et une partie jouée pendant que le compteur est fermé n'est jamais analysée. Ajoute leurs coffres dans **Réglages → Coffres non comptés**.
 
 **Fortnite s'est fermé en pleine partie.** Son replay est incomplet (Fortnite n'a jamais écrit la clé de déchiffrement) : cette partie ne peut pas être comptée, et l'outil la signale comme « replay incomplet ».
 
