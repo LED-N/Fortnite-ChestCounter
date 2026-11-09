@@ -165,10 +165,17 @@ public sealed class Store
     /// <summary>Known treasure hunt prize ids (week 1), in the chosen language. Unknown ids are added automatically with an empty name.</summary>
     public static Dictionary<string, string> DefaultPrizeNames => new()
     {
-        ["DelilahPrize:dpid_item1"] = L.T("Gantelets d'A$AP Rocky en or massif (pioche) ?", "A$AP Rocky solid gold gauntlets (pickaxe) ?", "Guanteletes de oro macizo de A$AP Rocky (pico) ?"),
-        ["DelilahPrize:dpid_item2"] = L.T("Plunder in Paradise (écran de chargement)", "Plunder in Paradise (loading screen)", "Plunder in Paradise (pantalla de carga)"),
-        ["DelilahPrize:dpid_item3"] = L.T("Mercedes-AMG G 63 (véhicule) ?", "Mercedes-AMG G 63 (vehicle) ?", "Mercedes-AMG G 63 (vehículo) ?"),
-        ["DelilahPrize:dpid_item4"] = L.T("No Trespassing (piste musicale)", "No Trespassing (music track)", "No Trespassing (pista musical)"),
+        ["DelilahPrize:dpid_item1"]  = L.T("A$AP Rocky en or massif (tenue)", "Solid Gold A$AP Rocky (Outfit)", "A$AP Rocky de oro macizo (atuendo)"),
+        ["DelilahPrize:dpid_item2"]  = L.T("Gantelets d'A$AP Rocky en or massif (pioche)", "Solid Gold A$AP Rocky's Gauntlets (Pickaxe)", "Guanteletes de A$AP Rocky de oro macizo (pico)"),
+        ["DelilahPrize:dpid_item3"]  = L.T("No Trespassing (piste musicale)", "No Trespassing (Jam Track)", "No Trespassing (pista musical)"),
+        ["DelilahPrize:dpid_item4"]  = L.T("Plunder in Paradise (écran de chargement)", "Plunder in Paradise (Loading Screen)", "Plunder in Paradise (pantalla de carga)"),
+        ["DelilahPrize:dpid_item5"]  = L.T("Mercedes-AMG G 63 « G-Wagon » (voiture + décalcomanie)", "Mercedes-AMG G 63 'G-Wagon' (Car + Decal)", "Mercedes-AMG G 63 'G-Wagon' (coche + calcomanía)"),
+        ["DelilahPrize:dpid_item6"]  = L.T("Accès à la boutique Pirate (2026 + 2027)", "Pirate Shop Access (2026 + 2027)", "Acceso a la tienda Pirata (2026 + 2027)"),
+        ["DelilahPrize:dpid_item14"] = L.T("Lil Uzi Vert en or massif (tenue)", "Solid Gold Lil Uzi Vert (Outfit)", "Lil Uzi Vert de oro macizo (atuendo)"),
+        ["DelilahPrize:dpid_item15"] = L.T("Diamond and Gold (accessoire de dos)", "Diamond and Gold (Back Bling)", "Diamond and Gold (accesorio de espalda)"),
+        ["DelilahPrize:dpid_item16"] = L.T("London (piste musicale)", "London (Jam Track)", "London (pista musical)"),
+        ["DelilahPrize:dpid_item17"] = L.T("So Kawaii (écran de chargement)", "So Kawaii (Loading Screen)", "So Kawaii (pantalla de carga)"),
+        ["DelilahPrize:dpid_item18"] = L.T("Cadillac CT5-V Blackwing (voiture + décalcomanie)", "Cadillac CT5-V Blackwing (Car + Decal)", "Cadillac CT5-V Blackwing (coche + calcomanía)"),
     };
 
     public void LoadPrizeNames()
