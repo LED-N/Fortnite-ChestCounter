@@ -765,6 +765,10 @@ List<(string Label, Action Run, string? About)> Items()
                     }, L.T("Entrée pour passer à l'opacité suivante (appliquée tout de suite).", "Enter for the next opacity (applied at once).", "Intro para pasar a la opacidad siguiente (se aplica al instante).")));
                 }
             }
+            list.Add(Item($"{L.T("Coffres non comptés", "Chests not counted", "Cofres no contados")} : {L.N(config.ExtraChests)}", EditExtraChests,
+                L.T("Certaines parties n'ont pas de replay (effacé, non enregistré) : leurs coffres manquent au total. Entrée pour les ajouter, soit en estimant à partir du nombre de parties jouées, soit en donnant le nombre de coffres. 0 = aucun.",
+                    "Some matches have no replay left (deleted, not recorded), so their chests are missing from the total. Enter to add them, either by estimating from your match count or by giving the chest count. 0 = none.",
+                    "Algunas partidas no tienen repetición (borrada, no grabada), así que sus cofres faltan en el total. Intro para añadirlos, ya sea estimando por tu número de partidas o dando el número de cofres. 0 = ninguno.")));
             if (OperatingSystem.IsWindows())
             {
                 list.Add(Item($"{L.T("Réduire dans la zone de notification", "Minimize to the notification area", "Minimizar al área de notificación")} : {YesNo(config.MinimizeToTray)}",
@@ -950,8 +954,10 @@ void DrawHome(Frame f, int noteRoom)
 
     var chests = matches.Sum(m => m.ChestsOpened);
     var treasures = matches.Sum(m => m.TreasureFinds.Count);
+    // Read in the replays, then the chests the player declared by hand: "1,200 + 300 chests", never the sum.
+    var extra = ChestCorrection.Extra(config);
     var avg = matches.Count > 0 ? ((double)chests / matches.Count).ToString("F1", L.Culture) : "0";
-    Row(L.T("Total", "Total", "Total"), new Seg(L.Count(chests, "coffre", "chest", "cofre"), ConsoleColor.Yellow),
+    Row(L.T("Total", "Total", "Total"), new Seg($"{L.N(chests)}{(extra > 0 ? $" + {L.N(extra)}" : "")} {(chests + extra == 1 ? L.T("coffre", "chest", "cofre") : L.T("coffres", "chests", "cofres"))}", ConsoleColor.Yellow),
         new Seg($"  ·  {L.Count(matches.Count, "partie", "parties", "match", "matches", "partida", "partidas")}  ·  {L.T($"{avg} par partie", $"{avg} per match", $"{avg} por partida")}", ConsoleColor.Gray),
         new Seg(treasures > 0 ? $"  ·  ★ {L.Count(treasures, "trésor", "treasure", "tesoro")}" : "", ConsoleColor.Magenta),
         new Seg(treasures > 0 ? L.T($" (1 tous les {L.N((int)Math.Round((double)chests / treasures))} coffres)", $" (1 every {L.N((int)Math.Round((double)chests / treasures))} chests)", $" (1 cada {L.N((int)Math.Round((double)chests / treasures))} cofres)") : "", ConsoleColor.DarkGray));
@@ -1165,6 +1171,107 @@ void ChangeDemosFolder()
     }
 }
 
+void EditExtraChests()
+{
+    ConsoleUi.Screen(appName, L.T("coffres non comptés", "chests not counted", "cofres no contados"));
+    ConsoleUi.Text(L.T("Coffres manquants dans le total :", "Chests missing from the total:", "Cofres que faltan en el total:"));
+    ConsoleUi.Hint("  " + L.N(config.ExtraChests));
+    ConsoleUi.Blank();
+    ConsoleUi.Hint(L.T("Celles des parties sans replay (effacé, non enregistré). Comptées dans le total de l'overlay et du rapport ; les chiffres par partie ne bougent pas.",
+        "Those of the matches without a replay (deleted, not recorded). Counted in the overlay and report totals; the per-match figures are unchanged.",
+        "Los de las partidas sin repetición (borrada, no grabada). Se cuentan en el total del overlay y del informe; las cifras por partida no cambian."));
+    ConsoleUi.Blank();
+
+    var matches = Profiles.View(data, config).Matches;
+    var counted = matches.Sum(m => m.ChestsOpened);
+    var avg = matches.Count > 0 ? (double)counted / matches.Count : 0;
+    var avgText = avg.ToString("0.##", L.Culture);
+
+    var options = new[]
+    {
+        L.T($"Par le nombre de parties (recommandé) : {avgText} cofres par partie", $"From your match count (recommended): {avgText} chests per match", $"Por número de partidas (recomendado): {avgText} cofres por partida"),
+        L.T("Par le nombre de coffres", "From the chest count", "Por número de cofres"),
+        L.T("Annuler", "Cancel", "Cancelar"),
+    };
+    var descriptions = new string?[]
+    {
+        L.T("Tu donnes le nombre de parties que tu as jouées en tout : les parties sans replay sont estimées à la moyenne des parties comptées.",
+            "You give the number of matches you have played in total: the matches without a replay are estimated at the average of the counted ones.",
+            "Das el número de partidas que has jugado en total: las partidas sin repetición se estiman con la media de las contadas."),
+        L.T("Tu donnes directement le nombre de coffres manquants.",
+            "You give the number of missing chests directly.",
+            "Das directamente el número de cofres que faltan."),
+    };
+
+    var choice = ConsoleUi.Menu(options, 0, null, descriptions, escapeIndex: 2);
+    if (choice == 0)
+    {
+        EstimateFromMatchCount(matches.Count, avg);
+    }
+    else if (choice == 1)
+    {
+        AskChestCount();
+    }
+}
+
+void EstimateFromMatchCount(int countedMatches, double avg)
+{
+    ConsoleUi.Screen(appName, L.T("estimation par les parties", "estimate from matches", "estimación por partidas"));
+    ConsoleUi.Text(L.T($"Parties comptées : {L.Count(countedMatches, "partie", "parties", "match", "matches", "partida", "partidas")} · {avg.ToString("0.##", L.Culture)} cofres par partie",
+        $"Matches counted: {L.Count(countedMatches, "partie", "parties", "match", "matches", "partida", "partidas")} · {avg.ToString("0.##", L.Culture)} chests per match",
+        $"Partidas contadas: {L.Count(countedMatches, "partie", "parties", "match", "matches", "partida", "partidas")} · {avg.ToString("0.##", L.Culture)} cofres por partida"));
+    ConsoleUi.Blank();
+    ConsoleUi.Hint(L.T("Combien de parties as-tu jouées en tout (comptées et non comptées) ?",
+        "How many matches have you played in total (counted and not counted)?",
+        "¿Cuántas partidas has jugado en total (contadas y no contadas)?"));
+    ConsoleUi.Hint(L.T("Échap pour annuler.", "Esc to cancel.", "Esc para cancelar."));
+    ConsoleUi.Blank();
+    var typed = ConsoleUi.Input(L.T("Parties au total : ", "Matches in total: ", "Partidas en total: "), L.N(countedMatches));
+    if (!int.TryParse(typed.Trim(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.CurrentCulture, out var total) || total < countedMatches)
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine(L.T($"Nombre invalide : il doit être au moins {L.N(countedMatches)} (les parties déjà comptées).",
+            $"Invalid number: it must be at least {L.N(countedMatches)} (the matches already counted).",
+            $"Número no válido: debe ser al menos {L.N(countedMatches)} (las partidas ya contadas)."));
+        Console.ResetColor();
+        return;
+    }
+
+    var missing = total - countedMatches;
+    // Rounded once, at the end: rounding the average first would show "40 × 30.1 = 1,204" for a result of 1,205.
+    var estimate = (int)Math.Round(missing * avg, MidpointRounding.AwayFromZero);
+    var lost = missing == 0 ? L.T("aucune partie sans replay", "no match without a replay", "ninguna partida sin repetición")
+        : L.T($"{L.Count(missing, "partie", "parties", "match", "matches", "partida", "partidas")} sans replay × {avg.ToString("0.##", L.Culture)} = {L.Count(estimate, "coffre", "chest", "cofre")} estimés",
+            $"{L.Count(missing, "partie", "parties", "match", "matches", "partida", "partidas")} without a replay × {avg.ToString("0.##", L.Culture)} = {L.Count(estimate, "coffre", "chest", "cofre")} estimated",
+            $"{L.Count(missing, "partie", "parties", "match", "matches", "partida", "partidas")} sin repetición × {avg.ToString("0.##", L.Culture)} = {L.Count(estimate, "cofre", "chest", "cofres")} estimados");
+
+    config.ExtraChests = estimate;
+    ConsoleUi.Blank();
+    Console.WriteLine("  " + lost, ConsoleColor.Cyan);
+    Console.WriteLine("  " + L.T($"Coffres non comptés : {L.N(estimate)}", $"Chests not counted: {L.N(estimate)}", $"Cofres no contados: {L.N(estimate)}"), ConsoleColor.Yellow);
+}
+
+void AskChestCount()
+{
+    ConsoleUi.Screen(appName, L.T("coffres non comptés", "chests not counted", "cofres no contados"));
+    ConsoleUi.Text(L.T("Coffres manquants dans le total :", "Chests missing from the total:", "Cofres que faltan en el total:"));
+    ConsoleUi.Hint("  " + L.N(config.ExtraChests));
+    ConsoleUi.Blank();
+    ConsoleUi.Hint(L.T("Tape un nombre puis Entrée. Échap pour annuler.", "Type a number, then Enter. Esc to cancel.", "Escribe un número y pulsa Intro. Esc para cancelar."));
+    ConsoleUi.Blank();
+    var typed = ConsoleUi.Input(L.T("Coffres : ", "Chests: ", "Cofres: "), L.N(config.ExtraChests));
+    if (int.TryParse(typed.Trim(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.CurrentCulture, out var value) && value >= 0)
+    {
+        config.ExtraChests = value;
+    }
+    else
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine(L.T("Nombre invalide : garde la valeur précédente.", "Invalid number: the previous value is kept.", "Número no válido: se mantiene el valor anterior."));
+        Console.ResetColor();
+    }
+}
+
 void ResetConfiguration()
 {
     ConsoleUi.Screen(appName, L.T("recommencer la configuration", "start the setup again", "repetir la configuración"));
@@ -1336,7 +1443,7 @@ static void ChooseProfile(TrackerData d, Config c, Store s)
 
 static void UpdateOverlay(Store store, Config config, TrackerData d, MatchRecord? live, bool inProgress)
 {
-    var view = OverlayModel.Build(Profiles.View(d, config), live, inProgress);
+    var view = OverlayModel.Build(Profiles.View(d, config), live, inProgress, ChestCorrection.Extra(config));
     ReportWriter.WriteOverlay(store, view);
     if (OperatingSystem.IsWindows() && NativeOverlay.IsRunning)
     {

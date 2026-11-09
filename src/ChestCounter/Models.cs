@@ -118,6 +118,12 @@ public sealed class Config
 
     /// <summary>Minimum delay between two readings of the replay in progress (seconds, 10 minimum).</summary>
     public int LiveIntervalSeconds { get; set; } = 30;
+
+    /// <summary>
+    /// Chests the replay reading missed and that the player adds by hand (matches without a replay, replay not
+    /// recorded or deleted). Counted in the lifetime total of the overlay and of the report; 0 = off.
+    /// </summary>
+    public int ExtraChests { get; set; }
 }
 
 public sealed class TrackerData

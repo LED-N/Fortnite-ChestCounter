@@ -15,6 +15,17 @@ public static class OverlayAppearance
     public static int Next(int[] values, int current) => values[(Array.IndexOf(values, current) + 1) % values.Length];
 }
 
+/// <summary>
+/// Some matches are never analyzed (replay removed or not recorded), so the player can declare how many chests
+/// the replay reading missed (see <see cref="Config.ExtraChests"/>). The correction only raises the lifetime total
+/// of the overlay and of the report: the per-match figures and the CSV keep what the replays contain.
+/// </summary>
+public static class ChestCorrection
+{
+    /// <summary>Chests to add on top of the analyzed ones (0 when the correction is off).</summary>
+    public static int Extra(Config c) => Math.Max(0, c.ExtraChests);
+}
+
 /// <summary>Builds what the overlays (window and OBS page) show from the saved matches and the match in progress.</summary>
 public static class OverlayModel
 {
@@ -23,12 +34,16 @@ public static class OverlayModel
 
     /// <param name="live">Figures of the match in progress, when the replay could be read (null otherwise).</param>
     /// <param name="inProgress">A match is being recorded (even if its figures are not readable yet).</param>
-    public static OverlayView Build(TrackerData d, MatchRecord? live, bool inProgress)
+    /// <param name="extraChests">
+    /// Chests the replay reading missed, declared by the player (<see cref="Config.ExtraChests"/>). They are added to
+    /// the lifetime total only: it is a correction of the past, not of the session or of the current match.
+    /// </param>
+    public static OverlayView Build(TrackerData d, MatchRecord? live, bool inProgress, int extraChests = 0)
     {
         var liveChests = live?.ChestsOpened ?? 0;
         var liveTreasures = live?.TreasureFinds.Count ?? 0;
 
-        var total = d.Matches.Sum(m => m.ChestsOpened) + liveChests;
+        var total = d.Matches.Sum(m => m.ChestsOpened) + liveChests + Math.Max(0, extraChests);
         var session = d.Matches.Where(ReportWriter.IsThisSession).ToList();
         var rows = new List<OverlayRow>();
 

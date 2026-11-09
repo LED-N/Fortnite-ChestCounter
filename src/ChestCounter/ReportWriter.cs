@@ -142,6 +142,7 @@ public static class ReportWriter
         .tile.hero .k{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#f3cf7a}
         .tile.hero .v{font-size:60px;color:#ffd36a;line-height:1}
         .tile.hero .l{color:#fbecc4}
+        .tile.hero .s{color:#f3cf7a}
         @media (max-width:820px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.tile.hero{grid-column:span 2}}
         .card{background:var(--card);color:var(--cink);border:1px solid var(--line);border-radius:8px;padding:6px 16px;overflow-x:auto}
         .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
@@ -237,6 +238,8 @@ public static class ReportWriter
         var progress = Progress;
         var matches = data.Matches.OrderByDescending(When).ToList();
         var totalChests = matches.Sum(m => m.ChestsOpened);
+        // Chests the player declared by hand (matches without a replay): counted in the total, as in the overlay.
+        var extra = ChestCorrection.Extra(config);
         var avg = matches.Count > 0 ? (double)totalChests / matches.Count : 0;
         var best = matches.Count > 0 ? matches.Max(m => m.ChestsOpened) : 0;
         var treasures = matches.Sum(m => m.TreasureFinds.Count);
@@ -264,7 +267,7 @@ public static class ReportWriter
             <span class="muted" style="font-size:13px">{updated}</span></header>
             {LoadingCard(progress)}{ProfilesLine(profiles, player)}
             <section class="tiles">
-              <div class="tile hero"><div class="k">{L.T("Coffres au total", "Chests in total", "Cofres en total")}</div><div class="v num">{totalChests.ToString("N0", Fr)}</div><div class="l">{L.T($"ouverts ou détruits par toi · {session.ToString("N0", Fr)} depuis le lancement", $"opened or destroyed by you · {session.ToString("N0", Fr)} since the tool started", $"abiertos o destruidos por ti · {session.ToString("N0", Fr)} desde que se abrió")}</div></div>
+              <div class="tile hero"><div class="k">{L.T("Coffres au total", "Chests in total", "Cofres en total")}</div><div class="v num">{(totalChests + extra).ToString("N0", Fr)}</div><div class="l">{L.T($"ouverts ou détruits par toi · {session.ToString("N0", Fr)} depuis le lancement", $"opened or destroyed by you · {session.ToString("N0", Fr)} since the tool started", $"abiertos o destruidos por ti · {session.ToString("N0", Fr)} desde que se abrió")}</div>{(extra > 0 ? $"<div class=\"s\">{L.T($"dont {extra.ToString("N0", Fr)} non comptés (sans replay)", $"of which {extra.ToString("N0", Fr)} not counted (no replay)", $"de ellos {extra.ToString("N0", Fr)} no contados (sin repetición)")}</div>" : "")}</div>
               {Tile(matches.Count.ToString("N0", Fr), L.T("parties analysées", "matches analyzed", "partidas analizadas"))}
               {Tile(avg.ToString("0.0", Fr), L.T("coffres par partie", "chests per match", "cofres por partida"))}
               {Tile(best.ToString("N0", Fr), L.T("record en une partie", "best match", "récord en una partida"))}
