@@ -116,7 +116,7 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
     private readonly List<GrantEvent> _grants = new();
 
     /// <summary>Bump when the analysis changes so that existing replays are re-analyzed.</summary>
-    public const int CurrentVersion = 15;
+    public const int CurrentVersion = 16;
 
     private static readonly bool ProbeDebug = Environment.GetEnvironmentVariable("CHESTCOUNTER_DEBUG") == "4";
 
@@ -760,10 +760,16 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
             var nextHandler = hi + 1 < handlerTimes.Count ? handlerTimes[hi + 1] : float.MaxValue;
             // Buried chests grant the prize when the dig completes, ~2.5s before the chest reports "searched": allow
             // up to +4s for them only.
-            var closest = _searches
+            var nearby = _searches
                 .Where(x => x.Time >= h - 3 && (x.Time <= h + 2 || (x.Time <= h + 4 && ChestKinds.Classify(x.Label) == ChestKinds.Buried)))
                 .OrderBy(x => Math.Abs(x.Time - h))
-                .FirstOrDefault();
+                .ToList();
+            // Only the target's team can give the recording player a treasure, and only with a chest: an enemy's
+            // chest or an ammo box opened closer to that moment must not hide the chest that gave it.
+            bool OwnTeam(SearchEvent x) => x.SearcherPawn is uint p && (targetPawns.Contains(p) || teammatePawns.ContainsKey(p));
+            var closest = nearby.FirstOrDefault(x => OwnTeam(x) && ChestKinds.IsChest(ChestKinds.Classify(x.Label)))
+                ?? nearby.FirstOrDefault(OwnTeam)
+                ?? nearby.FirstOrDefault();
             var mine = closest != null && closest.SearcherPawn is uint cp && targetPawns.Contains(cp);
             var golden = finds.Concat(teamFinds).FirstOrDefault(f => f.FromGoldenChest && f.ObtainedAtSeconds is float g && Math.Abs(g - h) <= 5);
             if (Environment.GetEnvironmentVariable("CHESTCOUNTER_DEBUG") == "1")
