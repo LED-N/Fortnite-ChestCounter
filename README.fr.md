@@ -8,7 +8,7 @@
 
 [![version](https://img.shields.io/github/v/release/LED-N/Fortnite-ChestCounter?style=flat-square&label=version&color=e8b04b)](../../releases/latest) [![téléchargements](https://img.shields.io/github/downloads/LED-N/Fortnite-ChestCounter/total?style=flat-square&label=t%C3%A9l%C3%A9chargements&color=e8b04b)](../../releases) ![Windows 10 | 11](https://img.shields.io/badge/Windows-10%20%7C%2011-3a7bd5?style=flat-square) [![licence](https://img.shields.io/github/license/LED-N/Fortnite-ChestCounter?style=flat-square&label=licence&color=555)](LICENSE)
 
-**Compte chaque coffre que tu ouvres dans Fortnite, partie après partie, avec un overlay intégré au jeu.**
+**Compte chaque coffre que tu ouvres dans Fortnite, partie après partie, avec un overlay qui se fond dans le jeu.**
 
 <img src="docs/overlay-fr.png" alt="Overlay entre deux parties" height="150">&nbsp;&nbsp;&nbsp;&nbsp;<img src="docs/overlay-match-fr.png" alt="Overlay pendant une partie" height="150">
 
@@ -18,163 +18,190 @@
 
 ---
 
-Chest Counter lit les replays que Fortnite enregistre après chaque partie et tient le compte des coffres que tu as ouverts, ainsi que des **trésors de la chasse au trésor** obtenus grâce à tes coffres. Un overlay transparent affiche tes chiffres par-dessus le jeu, comme le reste du HUD, et un rapport détaillé garde tout ton historique.
+Le compteur de coffres lit les replays (« rediffusions ») que Fortnite enregistre après chaque partie et tient le compte des coffres que tu as ouverts, ainsi que des **trésors de la chasse au trésor** sortis de tes coffres. Un overlay transparent affiche tes chiffres par-dessus le jeu, comme le reste du HUD, et la fenêtre du compteur garde tout ton historique, tes chances d'obtenir la tenue en or et ta collection de trésors.
 
-> Il compte les coffres **que tu as ouverts**. Il ne montre pas où se trouvent les coffres sur la carte.
+> Il compte les coffres **que tu as ouverts**. Il n'indique pas où se trouvent les coffres sur la carte.
 
-## Comment ça marche (et pourquoi c'est sans risque)
+## Comment ça marche (et pourquoi c'est sûr)
 
-Fortnite peut enregistrer un **fichier replay** de chaque partie sur ton PC. Chest Counter lit ces fichiers une fois la partie terminée, et rien d'autre.
+Fortnite peut enregistrer un **fichier replay** de chaque partie sur ton PC. Le compteur lit ces fichiers une fois la partie terminée, et rien d'autre.
 
-- ✅ **Lit uniquement les replays** : les fichiers `.replay` que Fortnite écrit dans `%LOCALAPPDATA%\FortniteGame\Saved\Demos`. Ils sont ouverts en lecture seule et jamais modifiés.
-- ✅ **Aucune modification du jeu** : rien n'est touché dans le dossier d'installation de Fortnite, aucun fichier n'est ajouté ni modifié.
-- ✅ **Aucun accès à la mémoire du jeu** : l'outil ne lit, n'écrit et n'injecte jamais rien dans le processus de Fortnite. Il n'interagit pas du tout avec le jeu en cours.
-- ✅ **Aucune donnée envoyée** : pas de connexion, pas d'accès à ton compte Epic, pas de télémétrie. Le seul accès réseau est la vérification d'une nouvelle version sur GitHub, désactivable dans les réglages.
-- ✅ **Léger** : tourne en priorité basse (et en « mode efficacité » sous Windows 11), dort entre les parties, et l'overlay n'est redessiné que quand un chiffre change.
+- ✅ **Lit uniquement les replays** : les fichiers `.replay` que Fortnite écrit dans `%LOCALAPPDATA%\FortniteGame\Saved\Demos`. Ils sont ouverts en lecture seule, jamais modifiés.
+- ✅ **Aucune modification du jeu** : rien n'est touché dans le dossier d'installation de Fortnite, aucun fichier n'est ajouté ni changé.
+- ✅ **Aucun accès à la mémoire du jeu** : l'outil ne lit, n'écrit et n'injecte jamais rien dans le processus Fortnite. Il n'interagit pas du tout avec le jeu en cours.
+- ✅ **Aucune donnée envoyée** : pas de connexion, pas d'accès à ton compte Epic, pas de télémétrie. Il ne se connecte qu'à GitHub, pour télécharger : les données de la chasse au trésor (semaines, cotes, heures du trésor, quelques kilo-octets à chaque démarrage), les images de la collection de trésors (une seule fois) et, sauf si tu le désactives, une nouvelle version de l'outil. Rien n'est envoyé.
+- ✅ **Rien d'ouvert sur le réseau** : la fenêtre affiche une page que le compteur sert à ton PC uniquement (`127.0.0.1`, avec une clé aléatoire).
+- ✅ **Léger** : tourne en priorité basse (et en « mode efficacité » sur Windows 11), dort entre les parties, et le moteur d'affichage de la fenêtre est arrêté quand elle est dans la zone de notification.
 
 > [!IMPORTANT]
-> **Les replays (« rediffusions » dans Fortnite) doivent être activés** : *Paramètres → Jeu → Rediffusions → Enregistrer les rediffusions : **Activé***. Sans replays, l'outil n'a rien à lire.
+> **Les rediffusions doivent être activées dans Fortnite** : *Paramètres → Jeu → Rediffusions → Enregistrer les rediffusions : **Activé***. Sans replays, l'outil n'a rien à lire.
 
 Comme Fortnite n'écrit la clé de déchiffrement du replay qu'à la fin de la partie, les coffres sont comptés **quelques secondes après chaque partie**, pas pendant. Pendant que tu joues, l'overlay affiche **● En partie**.
 
-## Pour commencer
+## Démarrer
 
 1. Télécharge **[`ChestCounter.exe`](../../releases/latest)**. Ce seul fichier suffit.
-2. Active les replays dans Fortnite (voir ci-dessus).
+2. Active les rediffusions dans Fortnite (voir ci-dessus).
 3. Lance `ChestCounter.exe`.
-   > Windows peut afficher *« Windows a protégé votre ordinateur »*, car l'exe n'est pas signé. Clique sur *Informations complémentaires → Exécuter quand même*.
-4. Une courte installation (flèches + Entrée) te demande ta **langue** (français / anglais / espagnol), vérifie ton **dossier de replays**, propose de compter les **replays déjà présents** sur ton PC, puis demande si tu veux **l'overlay en jeu** et si le compteur doit **s'ouvrir automatiquement avec Fortnite**.
+   > Windows peut afficher « Windows a protégé votre ordinateur » car l'exe n'est pas signé. Clique sur *Informations complémentaires → Exécuter quand même*.
+4. La fenêtre du compteur s'ouvre. Aucune question : la carte **Bienvenue** règle les trois points importants (ils restent dans **Réglages**), et les replays déjà présents sur ton PC sont comptés tout de suite.
 
-<p align="center"><img src="docs/setup-fr.png" alt="Installation au premier lancement" width="760"></p>
+<p align="center"><img src="docs/welcome-fr.png" alt="Premier lancement : la carte de bienvenue" width="820"></p>
 
-Si tu comptes tes replays existants, une barre de progression avance pendant que le rapport s'ouvre dans ton navigateur et se remplit en direct :
-
-<p align="center"><img src="docs/progress-fr.png" alt="Barre de progression de l'analyse" width="760"></p>
-
-5. Laisse le compteur ouvert pendant que tu joues. Le réduire le range dans la **zone de notification**, à côté de l'horloge (icône du coffre) : un clic dessus le rouvre. Quelques secondes après chaque partie, ses coffres sont ajoutés :
-
-<p align="center"><img src="docs/console-fr.png" alt="Accueil du compteur" width="820"></p>
+5. Laisse le compteur ouvert pendant que tu joues. Tu peux le réduire : il continue de compter (dans la barre des tâches, ou à côté de l'horloge si tu as choisi la zone de notification). Quelques secondes après chaque partie, ses coffres sont ajoutés.
 
 > [!TIP]
-> Fortnite ne garde qu'un nombre limité de replays non sauvegardés et efface les plus anciens, et une partie jouée pendant que le compteur est fermé n'est pas comptée. Active **Ouvrir avec Fortnite** (proposé à l'installation, ou dans l'onglet **Réglages**) pour ne plus y penser.
+> Fortnite ne garde qu'un nombre limité de replays non sauvegardés et supprime les plus anciens, et une partie jouée compteur fermé n'est pas comptée. Active **Réglages → Ouvrir avec Fortnite** pour ne plus y penser.
 
-## Utiliser le compteur
+## La fenêtre
 
-Tout se fait avec les **flèches** et **Entrée**, sans touche à retenir. **← →** passent d'un onglet à l'autre :
+Cinq onglets : **Accueil**, **Rapport**, **Overlay**, **Réglages** et **Aide**. En haut, ton compte et ce que fait le compteur (*En attente d'une partie*, *Partie en cours*, *Comptage des coffres…*).
 
-- **Accueil** : ton profil, l'état du compteur (en attente, partie en cours…), ton total, ta session et ta dernière partie. Le menu ouvre le rapport, affiche ou verrouille l'overlay, change de profil et installe les mises à jour. En bas, l'activité montre chaque partie comptée.
-- **Réglages** : chaque réglage se change avec Entrée, et une phrase l'explique en bas de l'écran.
-- **Aide** : comment ça marche, les raccourcis de l'overlay, ton dossier de données, et un lien pour signaler un problème.
+- **Accueil** : ton total, ta session, ta dernière partie et tes trésors, les boutons de l'overlay et des mises à jour, et l'activité (chaque partie comptée, ou pourquoi une partie a été ignorée).
+- **Rapport** : toutes tes statistiques (voir plus bas).
+- **Overlay** : l'overlay en jeu et la page pour OBS.
+- **Réglages** : langue, zone de notification, ouverture avec Fortnite, mises à jour, dossier des replays.
+- **Aide** : le fonctionnement, ton dossier de données, le journal d'erreurs, un lien pour signaler un problème, et **Désinstaller**.
+
+<p align="center"><img src="docs/home-fr.png" alt="Onglet Accueil" width="820"></p>
+
+La croix de la fenêtre demande avant d'arrêter le compteur (une partie jouée compteur fermé n'est pas comptée). Relancer `ChestCounter.exe` ramène la fenêtre au premier plan.
+
+### Les coffres ouverts avant le compteur
+
+Clique sur le **crayon** de *Coffres au total* (Accueil ou Rapport) pour ajouter les coffres que tu as ouverts avant d'utiliser le compteur. Tu ne sais pas combien ? Indique le nombre de parties affiché dans Fortnite (*Carrière → Statistiques*) : le compteur multiplie les parties qu'il n'a pas vues par ta moyenne. Un nombre négatif retire des coffres, 0 enlève l'ajout.
+
+<p align="center"><img src="docs/edit-fr.png" alt="Modifier le nombre de coffres" width="820"></p>
+
+### Réglages
 
 <p align="center"><img src="docs/settings-fr.png" alt="Onglet Réglages" width="820"></p>
 
-| Réglage | Ce qu'il fait |
+| Réglage | Effet |
 |---|---|
 | Langue | Français, anglais ou espagnol. |
-| Overlay en jeu | Activé ou désactivé (aucune fenêtre ni raccourci : tout reste dans le rapport). |
-| Style, taille, opacité de l'overlay | HUD ou classique, de 70 à 175 %, de 100 à 30 % d'opacité. Appliqués tout de suite. |
-| Réduire dans la zone de notification | Oui : réduire le compteur le range à côté de l'horloge au lieu de la barre des tâches. |
-| Ouvrir le rapport au démarrage | Ouvre le rapport à chaque lancement. |
-| Ouvrir avec Fortnite | Voir ci-dessous. |
-| Mises à jour | Proposées, installées automatiquement ou désactivées. |
+| Réduire dans la zone de notification | Oui : réduire la fenêtre la range à côté de l'horloge, en bas à droite de la barre des tâches (icône du coffre, parfois derrière la petite flèche ^). Non (par défaut) : elle reste dans la barre des tâches comme une fenêtre normale. |
+| Ouvrir avec Fortnite | Voir plus bas. |
+| Mises à jour | Proposées (par défaut), installées automatiquement ou désactivées. |
 | Dossier des replays | À changer seulement si tu l'as déplacé. |
-| Recommencer la configuration | Efface tes réglages et relance l'installation. Ton historique est conservé. |
+| Compte (profil) | Affiché quand plusieurs comptes Fortnite ont enregistré des replays sur ce PC. |
 
 ## Ouvrir avec Fortnite
 
-Avec cette option, un tout petit processus invisible démarre avec Windows et vérifie toutes les quelques secondes si Fortnite est lancé. Il ne lit rien du jeu : il regarde seulement la liste des programmes ouverts. Quand Fortnite démarre, il ouvre le compteur directement dans la zone de notification (le jeu garde l'écran). Quand Fortnite se ferme, le compteur compte ta dernière partie puis se ferme 30 secondes plus tard ; appuie sur une touche dans sa fenêtre pour le garder ouvert. Désactivable à tout moment dans l'onglet **Réglages** : le processus invisible s'arrête et est retiré du démarrage de Windows. Tant que l'option est active, le processus invisible continue de tourner après avoir quitté le compteur : Windows refuse donc de supprimer ou déplacer `ChestCounter.exe`. Désactive d'abord l'option.
+Avec cette option, un tout petit processus invisible démarre avec Windows et regarde toutes les quelques secondes si Fortnite est lancé. Il ne lit rien du jeu : il regarde seulement la liste des programmes ouverts. Quand Fortnite démarre, il ouvre le compteur réduit (le jeu garde l'écran). Quand Fortnite se ferme, le compteur compte ta dernière partie, puis se ferme 30 secondes plus tard ; **Garder le compteur ouvert** dans l'Accueil (ou relancer `ChestCounter.exe`) le garde ouvert. Désactivable à tout moment dans **Réglages** : le processus invisible s'arrête et est retiré du démarrage de Windows. Tant que l'option est active, le processus invisible continue de tourner après la fermeture du compteur : Windows refuse alors de supprimer ou déplacer `ChestCounter.exe`. Désactive d'abord l'option, ou utilise **Aide → Désinstaller**.
 
 ## L'overlay
 
-Seulement des chiffres, cernés comme ceux du jeu, sans fond : place-le sous la minimap et il se fond dans le HUD.
+Juste les chiffres, contourés comme ceux du jeu, sans fond : place-le sous la minicarte et il se fond dans le HUD.
 
 - **En grand** : ton **total** de coffres, avec le coffre doré.
 - **Dernière** : les coffres de ta dernière partie. Pendant une partie : **● En partie** (ses coffres sont comptés à la fin).
 - **Session** : les coffres depuis le lancement du compteur.
 - **★** : tes trésors.
 
-| Raccourci | Ce qu'il fait |
+| Raccourci | Effet |
 |---|---|
-| **Ctrl+Maj+O** | Afficher / masquer l'overlay. Fonctionne partout, même en jeu. |
-| **Ctrl+Maj+L** | Verrouiller / déverrouiller. **Verrouillé** : la souris passe au travers (idéal en jeu). **Déverrouillé** : un fond apparaît, clic gauche maintenu pour le déplacer, clic droit pour le masquer. |
+| **Ctrl+Maj+O** | Afficher / masquer l'overlay. Marche partout, même en jeu. |
+| **Ctrl+Maj+L** | Verrouiller / déverrouiller. **Verrouillé** : la souris passe au travers (idéal en jeu). **Déverrouillé** : un fond apparaît, maintiens le clic gauche pour le déplacer, clic droit pour le masquer. |
 
-Pour le voir par-dessus le jeu, mets Fortnite en **« Plein écran fenêtré »** (*Paramètres → Vidéo → Mode de fenêtre*) : en plein écran exclusif, Windows ne peut rien afficher par-dessus le jeu. Tu préfères l'ancien overlay, une carte sombre avec plus de détails ? *Réglages → Style de l'overlay → classique*. Tu n'en veux pas du tout ? *Réglages → Overlay en jeu → désactivé*. Tu streames ? `overlay.html` est un overlay à fond transparent pour une source navigateur **OBS**.
+Pour le voir par-dessus le jeu, mets Fortnite en **Plein écran fenêtré** (*Paramètres → Vidéo → Mode de fenêtre*) : en plein écran exclusif, Windows ne peut rien afficher par-dessus le jeu. L'onglet **Overlay** l'active ou le désactive et règle son style (HUD, ou classique : une carte sombre avec plus de détails), sa taille et son opacité. **Afficher le total d'équipe** ajoute une ligne avec tes coffres + ceux de tes coéquipiers (désactivé par défaut, et imprécis : un coffre ouvert par un coéquipier à plus de 150 m de toi n'est pas dans tes replays).
+
+<p align="center"><img src="docs/overlay-tab-fr.png" alt="Onglet Overlay" width="820"></p>
+
+**En stream (OBS).** Le compteur écrit en continu `overlay.html` (dossier des données) : les mêmes chiffres, au style choisi, sur fond transparent, rafraîchis toutes les 5 secondes. Dans OBS : *Sources → + → Navigateur*, coche *Fichier local*, choisis `%APPDATA%\ChestCounter\overlay.html`, largeur 360 × hauteur 220 (450 × 300 pour le style classique). **Copier le chemin**, dans l'onglet Overlay, le copie pour toi. Tu le veux seulement sur le stream, pas sur ton écran ? Désactive *Overlay en jeu* : la page pour OBS continue d'être mise à jour.
 
 ## Le rapport
 
-`report.html` s'ouvre dans ton navigateur et se met à jour tout seul : total, moyenne, record, coffres par jour, détail par type de coffre, trésors (et **1 trésor tous les N coffres**) et chaque partie. Il suit le thème de Windows : version nuit ou jour.
+L'onglet **Rapport** se met à jour tout seul après chaque partie : total, parties, moyenne, record, trésors (et **1 trésor tous les N coffres**), coffres par jour, types de coffres et provenance de tes trésors. L'interrupteur sous les chiffres ajoute le **total d'équipe** (désactivé par défaut). Les longues parties se replient : clique sur leur titre pour les ouvrir.
 
-<p align="center"><img src="docs/report-fr.png" alt="Rapport" width="820"></p>
+<p align="center"><img src="docs/report-fr.png" alt="Onglet Rapport" width="820"></p>
+
+- **Tes chances** (ouverte) : la probabilité d'avoir obtenu au moins une fois la **tenue en or** ou l'**accès à la boutique pirate** avec tous tes coffres, et pour chaque autre type de trésor. Les cotes sont celles publiées par Epic Games. Pendant une **heure du trésor**, les coffres comptent avec leurs chances augmentées, le bandeau affiche celle en cours ou la prochaine, et les cotes des trésors boostés changent en direct (en orange).
+- **Ils l'ont eu dans tes parties** (expérimental) : les accès à la boutique pirate et tenues en or obtenus par d'autres joueurs près de toi.
+- **Ta collection** : les trésors de la saison, semaine par semaine, à cocher. Un trésor sorti d'un coffre doré vu dans tes replays est coché tout seul.
+- **Trésors trouvés** et **Dernières parties** : chaque trésor et chaque partie, 10 par 10.
+
+<p align="center"><img src="docs/chances-fr.png" alt="Tes chances" width="820"></p>
+
+Le même rapport est aussi écrit dans `report.html` (dossier des données), à ouvrir dans un navigateur.
 
 ## Trésors
 
-- **★★ Coffre doré (certain).** Quand un coffre rapporte une récompense de la chasse au trésor (cosmétique, piste musicale, écran de chargement, véhicule…), le serveur fait apparaître un coffre doré qui porte l'**identifiant de la récompense**. L'outil le lit dans le replay.
-- **★ Chaque trésor reçu (moment exact).** Chaque trésor reçu est enregistré avec son moment exact et le coffre d'où il vient ; il n'est compté que si ce coffre est **le tien**. Quand l'objet est identifiable, il est nommé ; sinon il s'affiche **« Gizmo de trésor »** (feu d'artifice doré, extracteur portable, localisateurs, accélérateur d'extraction), dont le type exact n'est pas dans le replay.
-- **Trésors de l'équipe (estimation).** La chasse au trésor partage chaque trésor avec toute l'équipe : ceux trouvés par tes coéquipiers peuvent s'afficher dans le rapport (case à cocher), marqués de l'icône équipe. Ils sont déduits des trésors que tu reçois sans avoir ouvert de coffre, et n'entrent jamais dans tes totaux.
-- Un trésor venu d'autre chose qu'un coffre (caisse de munitions…) est signalé par ⚑ avec une **fiabilité faible** : c'est très probablement une erreur d'analyse du replay.
+- **★★ Coffre doré (certain).** Quand un coffre donne une récompense de la chasse au trésor (cosmétique, piste musicale, écran de chargement, véhicule…), le serveur fait apparaître un coffre doré qui porte l'**identifiant de la récompense**. L'outil le lit dans le replay et nomme la récompense.
+- **★ Chaque trésor reçu (moment exact).** Chaque trésor que tu reçois est enregistré avec son heure exacte et le coffre d'où il vient ; il ne compte que si ce coffre est **le tien**. Quand l'objet est identifiable, il est nommé ; sinon il apparaît comme **« Trésor (type inconnu) »** (feu d'artifice doré, extracteur portable, localisateurs, accélérateur d'extraction…), dont le type exact n'est pas dans le replay.
+- **Trésors de l'équipe (estimation).** La chasse au trésor partage chaque trésor avec toute l'équipe : ceux que trouvent tes coéquipiers peuvent être affichés dans *Trésors trouvés* (interrupteur), marqués de l'icône équipe. Ils sont déduits des trésors que tu reçois sans avoir ouvert de coffre, et ne comptent jamais dans tes totaux.
+- Un trésor venu d'autre chose qu'un coffre (caisse de munitions…) est signalé par ⚑ et une **fiabilité faible** : c'est très probablement une erreur de lecture du replay.
 
-Le jeu ne transmet que des identifiants, pas les noms : les noms des récompenses connues sont intégrés à l'outil.
+Le jeu n'envoie que des identifiants, pas de noms : les noms, les semaines, les cotes et les heures du trésor viennent de [`content/content.json`](content/content.json), lu sur GitHub à chaque démarrage, pour qu'une nouvelle semaine apparaisse sans nouvelle version de l'outil.
 
-## Profils (plusieurs comptes sur un PC)
+## Profils (plusieurs comptes sur un même PC)
 
-Les replays enregistrés sur un PC sont normalement ceux de son joueur : **pas de pseudo à taper**, l'outil compte le joueur qui a enregistré chaque replay. S'il trouve des replays de plusieurs comptes, chaque compte a son profil avec ses propres statistiques. L'outil demande alors à chaque lancement sur quel compte tu joues, et tu peux changer à tout moment avec **Changer de profil** dans l'accueil. Une partie jouée sur un autre compte est enregistrée dans le profil de ce compte, jamais perdue.
+Les replays enregistrés sur un PC sont normalement ceux de son joueur : **aucun pseudo à saisir**, l'outil compte le joueur qui a enregistré chaque replay. S'il trouve des replays de plusieurs comptes, chaque compte a son propre profil avec ses propres statistiques, et une liste à côté du nom, en haut de la fenêtre, passe de l'un à l'autre. Après une partie sur un autre compte, le compteur suit ce compte tout seul. Une partie jouée sur un autre compte est enregistrée dans le profil de ce compte, jamais perdue.
 
 ## Mises à jour
 
-Au démarrage, le compteur vérifie s'il existe une nouvelle version sur GitHub. Si c'est le cas, l'accueil affiche **ses nouveautés dans ta langue**, avec **Installer la version…** : elle est téléchargée, vérifiée, et le compteur redémarre. Ton historique et tes réglages sont conservés. Après la mise à jour, l'accueil rappelle une fois ce qui a changé. **Rechercher une mise à jour** revérifie sur GitHub à tout moment. Dans les réglages, tu peux choisir *proposées* (par défaut), *installées automatiquement* (seulement entre deux parties) ou *désactivées* (aucun accès réseau).
+Au démarrage, le compteur vérifie sur GitHub s'il existe une nouvelle version. Si oui, l'accueil affiche **ses nouveautés dans ta langue**, avec **Installer** : elle est téléchargée, vérifiée, et le compteur redémarre. Ton historique et tes réglages sont conservés. Après la mise à jour, l'accueil affiche une fois ce qui a changé. **Rechercher une mise à jour** interroge GitHub à tout moment. Dans les réglages, tu peux choisir *proposées* (par défaut), *installées automatiquement* (seulement entre deux parties) ou *désactivées* (aucune vérification).
 
 ## Tes données
 
-Tout est rangé dans `%APPDATA%\ChestCounter` (onglet **Aide → Ouvrir le dossier des données**) :
+Tout est stocké dans `%APPDATA%\ChestCounter` (**Aide → Ouvrir le dossier des données**) :
 
 | Fichier | Contenu |
 |---|---|
-| `report.html` | Le rapport (s'ouvre dans ton navigateur). |
-| `overlay.html` | Overlay transparent pour OBS. |
-| `matches.csv` | Une ligne par partie, pour Excel ou Google Sheets. |
 | `data.json` | Tout ton historique. **Sauvegarde-le** si tu changes de PC. |
 | `config.json` | Tes réglages, ton profil, la position de l'overlay. |
-| `errors.log` | Le détail des replays illisibles, à joindre à un rapport de bug. |
+| `report.html` | Le rapport, à ouvrir dans un navigateur. |
+| `overlay.html` | Overlay transparent pour OBS. |
+| `matches.csv` | Une ligne par partie, pour Excel ou Google Sheets. |
+| `content.json`, `images\` | Les données et images de la chasse au trésor téléchargées depuis GitHub. |
+| `webview\` | Les données du moteur d'affichage de la fenêtre. |
+| `errors.log` | Le détail des replays illisibles, à joindre à un signalement. |
 
-Pour tout recommencer : **Réglages → Recommencer la configuration** (ton historique est conservé), ou supprime ce dossier. Si tu utilisais l'ancienne version (ChestTracker), ton dossier `%APPDATA%\ChestTracker` est repris automatiquement.
+Pour tout recommencer, supprime ce dossier (ou garde `data.json` pour conserver ton historique). Si tu utilisais l'ancienne version (ChestTracker), ton dossier `%APPDATA%\ChestTracker` est repris automatiquement.
 
 ## FAQ
 
-**Rien n'est compté.** Vérifie que les rediffusions sont activées dans Fortnite, et que le compteur tourne quand la partie se termine. L'accueil te prévient si le dossier des replays est absent ou vide.
+**Rien n'est compté.** Vérifie que les rediffusions sont activées dans Fortnite et que le compteur tourne quand la partie se termine. Le haut de la fenêtre indique si le dossier des replays est introuvable, et l'activité de l'accueil dit pourquoi une partie a été ignorée.
 
-**Les caisses de munitions sont-elles comptées ?** Non. Caisses de munitions, de nourriture et canons à butin sont listés à part dans le rapport et n'entrent pas dans le total. Les coffres que tu **détruis** au lieu de les ouvrir sont comptés. Un coffre qui se remplit à nouveau pendant la partie et que tu rouvres compte une fois de plus ; repasser près d'un coffre déjà ouvert (coffre enterré creusé, coffre d'esprit) ne le compte pas deux fois.
+**Les caisses de munitions sont-elles comptées ?** Non. Les caisses de munitions, de nourriture et les canons à butin ne font pas partie du total de coffres. Les coffres que tu **détruis** au lieu de les ouvrir sont comptés. Un coffre rempli à nouveau pendant la partie et que tu rouvres compte une fois de plus ; revenir près d'un coffre déjà ouvert (coffre enterré déterré, coffre de sprite) ne le compte pas deux fois.
 
-**Et les modes créatifs ?** Seules les parties Battle Royale sont comptées ; les autres modes sont ignorés.
+**Quels modes sont comptés ?** Seulement le **Battle Royale sur la carte de la saison** (construction et zéro construction, du solo à l'escouade), là où se déroule la chasse au trésor des coffres. Pas comptés : le classé, OG, Reload, Blitz et les autres modes temporaires, les îles Créatif et UEFN, LEGO, Festival, les parties privées. Le compteur lit la carte et le mode de chaque replay ; une partie ignorée dit pourquoi dans l'activité.
 
-**Fortnite s'est fermé en pleine partie.** Son replay est incomplet (Fortnite n'a jamais écrit la clé de déchiffrement) : cette partie ne peut pas être comptée, et l'outil la signale comme « replay incomplet ».
+**Une partie avec ⚠ dans le rapport ?** Fortnite n'a pas enregistré ce que ton véhicule a détruit dans ce replay : du butin de coffres a été vu le long de ton trajet sans aucun coffre enregistré, ces coffres ne peuvent donc pas être comptés. Le ⚠ explique quoi faire.
 
-**« Impossible de lire ce replay ».** Une mise à jour de Fortnite peut changer le format des replays ; le parseur doit alors être mis à jour. Les parties déjà comptées sont conservées. [Ouvre un ticket](../../issues) en joignant `errors.log` (onglet **Aide → Ouvrir le journal d'erreurs**).
+**Fortnite s'est fermé en pleine partie.** Son replay est incomplet (Fortnite n'a jamais écrit la clé de déchiffrement) : cette partie ne peut pas être comptée, et l'outil l'affiche comme « replay incomplet ».
 
-**Impossible de supprimer `ChestCounter.exe` (« le fichier est ouvert dans un autre programme »).** Le processus invisible d'« Ouvrir avec Fortnite » l'utilise encore, même compteur fermé. Ouvre le compteur et mets **Réglages → Ouvrir avec Fortnite** sur *non* : le processus s'arrête et l'exe peut être supprimé.
+**« Impossible de lire ce replay ».** Une mise à jour de Fortnite peut changer le format des replays ; le lecteur doit alors être mis à jour. Les parties déjà comptées sont conservées. [Ouvre une issue](../../issues) avec `errors.log` en pièce jointe (**Aide → Ouvrir le journal d'erreurs**).
 
-**Où est passée la fenêtre ?** Réduite, elle est dans la zone de notification (icône du coffre, parfois derrière la petite flèche ^ à côté de l'horloge). Tu préfères la barre des tâches ? **Réglages → Réduire dans la zone de notification : non**.
+**Je n'arrive pas à supprimer `ChestCounter.exe` (« le fichier est ouvert dans un autre programme ») : pourquoi ?** Avec **Ouvrir avec Fortnite** activé, un petit processus invisible utilise l'exe en permanence, même compteur fermé. Deux solutions :
+- **Aide → Désinstaller ChestCounter** : désactive l'option, ferme le compteur et supprime l'exe. Tu choisis de garder ton historique et tes réglages (`%APPDATA%\ChestCounter`, pratique si tu le réinstalles plus tard) ou de tout supprimer.
+- Ou désactive **Réglages → Ouvrir avec Fortnite**, ferme le compteur, puis supprime `ChestCounter.exe` toi-même.
 
-**Déjà ouvert ?** Un seul compteur peut tourner à la fois : le relancer indique simplement qu'il est déjà ouvert.
+**Où est passée la fenêtre ?** Avec **Réglages → Réduire dans la zone de notification** activé, le compteur réduit est à côté de l'horloge, en bas à droite de la barre des tâches (icône du coffre, parfois derrière la petite flèche ^) ; un clic dessus le rouvre. Relancer `ChestCounter.exe` le ramène aussi.
+
+**La fenêtre reste vide ou s'ouvre dans mon navigateur.** La fenêtre utilise Microsoft Edge WebView2, intégré à Windows 11 et installé sur presque tous les Windows 10. Sans lui, le compteur ouvre la même page dans ton navigateur. Tu peux l'installer depuis le site de [Microsoft](https://developer.microsoft.com/microsoft-edge/webview2/) (*Evergreen Bootstrapper*).
+
+**Déjà ouvert ?** Un seul compteur peut tourner à la fois : le relancer ramène la fenêtre ouverte au premier plan.
 
 **Une partie peut-elle être comptée deux fois ?** Non, même si tu renommes ou sauvegardes le replay.
 
 ## Options en ligne de commande
 
 ```
-ChestCounter.exe --lang <fr|en|es>   change la langue
-ChestCounter.exe --demos <dossier>   autre dossier de replays
-ChestCounter.exe --data <dossier>    autre dossier de données
-ChestCounter.exe --once              analyse les replays terminés puis quitte
-ChestCounter.exe --reset-config      relance l'installation
+ChestCounter.exe --lang <fr|en|es>   changer la langue
+ChestCounter.exe --demos <dossier>   un autre dossier de replays
+ChestCounter.exe --data <dossier>    un autre dossier de données
+ChestCounter.exe --once              analyse les replays terminés puis quitte (écrit dans le terminal)
+ChestCounter.exe --reset-config      oublie les réglages (ton historique est conservé)
 ChestCounter.exe --overlay-preview <fichier.png>   enregistre des aperçus de l'overlay puis quitte
 ```
 
-## Compiler soi-même
+## Le compiler soi-même
 
 Installe le [SDK .NET 10](https://dotnet.microsoft.com/download/dotnet/10.0) (Windows x64), puis double-clique sur **`build.bat`** : l'exe est écrit dans `dist\ChestCounter.exe`. Le workflow GitHub Actions compile l'exe à chaque push et le joint à une release quand un tag `v*` est poussé, avec le texte de [`RELEASE_NOTES.md`](RELEASE_NOTES.md) (aussi affiché dans le compteur après une mise à jour).
 
 ## Licence et crédits
 
-[MIT](LICENSE). La lecture des replays repose sur [FortniteReplayDecompressor](https://github.com/Shiqan/FortniteReplayDecompressor) de Shiqan (MIT), légèrement modifié : voir [`lib/PATCHES.md`](lib/PATCHES.md). Les titres du rapport utilisent la police [Pirata One](https://fonts.google.com/specimen/Pirata+One) (SIL Open Font License, [`src/ChestCounter/Assets/PirataOne-OFL.txt`](src/ChestCounter/Assets/PirataOne-OFL.txt)). Merci à [koiseka](https://github.com/koiseka) pour ses corrections du comptage ([#6](../../pull/6)).
+[MIT](LICENSE). La lecture des replays s'appuie sur [FortniteReplayDecompressor](https://github.com/Shiqan/FortniteReplayDecompressor) de Shiqan (MIT), légèrement modifié : voir [`lib/PATCHES.md`](lib/PATCHES.md). La fenêtre utilise [Microsoft Edge WebView2](https://developer.microsoft.com/microsoft-edge/webview2/). Les titres utilisent la police [Pirata One](https://fonts.google.com/specimen/Pirata+One) (SIL Open Font License, [`src/ChestCounter/Assets/PirataOne-OFL.txt`](src/ChestCounter/Assets/PirataOne-OFL.txt)). Images et horaires des trésors : [fortnite.bot](https://fortnite.bot). Merci à [koiseka](https://github.com/koiseka) pour ses corrections du comptage ([#6](../../pull/6)).
 
-Ce projet n'est ni affilié, ni approuvé, ni sponsorisé par Epic Games. Fortnite est une marque d'Epic Games, Inc.
+Ce projet n'est ni affilié, ni approuvé, ni sponsorisé par Epic Games. Fortnite est une marque déposée d'Epic Games, Inc.

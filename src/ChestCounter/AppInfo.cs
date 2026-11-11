@@ -28,6 +28,9 @@ public static class AppInfo
         var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Path.GetFullPath(dataDir).TrimEnd('\\', '/').ToLowerInvariant()));
         return @"Local\ChestCounter.Instance." + Convert.ToHexString(hash, 0, 8);
     }
+    /// <summary>Set by a second launch: the instance already open comes to the front.</summary>
+    public static string ShowEventFor(string dataDir) => InstanceMutexFor(dataDir).Replace(".Instance.", ".Show.");
+
     public const string StandbyMutex = @"Local\ChestCounter.Standby";
     public const string StandbyStopEvent = @"Local\ChestCounter.StandbyStop";
 }
