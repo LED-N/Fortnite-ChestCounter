@@ -241,6 +241,9 @@ public static class ReportWriter
           .thumb{display:none}
           .ctable th{white-space:normal;letter-spacing:.04em}
           .tcard{padding:4px 10px}
+          /* Word and percentage do not fit side by side: the percentage goes under the word */
+          .tcv{flex-wrap:wrap;justify-content:flex-start;gap:2px 8px}
+          .ctable td.n{white-space:normal}
           .tk{display:flex;flex-wrap:wrap;align-items:center;gap:4px}.tk .gotbadge{margin-left:0}
           .hval .big{font-size:34px}
           .ghead{align-items:flex-start;flex-wrap:wrap}
