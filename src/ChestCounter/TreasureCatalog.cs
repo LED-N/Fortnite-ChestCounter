@@ -251,6 +251,15 @@ public static class TreasureCatalog
     /// <summary>The week a moment falls in (null outside the hunt).</summary>
     public static TreasureWeek? WeekOf(DateTime utc) => Weeks.FirstOrDefault(w => utc >= w.From && utc < w.To);
 
+    /// <summary>Start of the treasure hunt (its first week): a chest opened before it could not give a treasure.</summary>
+    public static DateTime HuntStart => Weeks.Count > 0 ? Weeks[0].From : DateTime.MinValue;
+
+    /// <summary>
+    /// The week whose chances the report shows: the current one, or the last one once the hunt is over (null before
+    /// it starts).
+    /// </summary>
+    public static TreasureWeek? ShownWeek(DateTime utc) => WeekOf(utc) ?? Weeks.LastOrDefault(w => w.To <= utc);
+
     public static string KindName(string kind) => kind switch
     {
         GoldOutfit => L.T("Tenue en or", "Gold Outfit", "Traje de oro"),
@@ -272,7 +281,14 @@ public static class TreasureCatalog
     /// Same, chest by chest: 1 − Π(1 − p × boost), each chest with the boost of the moment it was opened (Treasure
     /// Hours), plus <paramref name="plainChests"/> chests at the normal odds (added by hand: their time is unknown).
     /// </summary>
-    public static double AtLeastOnce(TreasureOdds odds, IEnumerable<DateTime> chestTimesUtc, long plainChests)
+    public static double AtLeastOnce(TreasureOdds odds, IEnumerable<DateTime> chestTimesUtc, long plainChests) =>
+        -double.ExpM1(LogNever(odds, chestTimesUtc, plainChests));
+
+    /// <summary>
+    /// Natural log of the chance of never having obtained it: Σ ln(1 − p × boost). Kept apart because the chance of
+    /// "at least once" rounds to exactly 1 for the common kinds, while this one still tells how far from 1 it is.
+    /// </summary>
+    public static double LogNever(TreasureOdds odds, IEnumerable<DateTime> chestTimesUtc, long plainChests)
     {
         var p = 1.0 / odds.OneIn;
         var sum = Math.Max(0, plainChests) * double.LogP1(-p);
@@ -280,7 +296,19 @@ public static class TreasureCatalog
         {
             sum += double.LogP1(-Math.Min(0.999, p * Boost(odds.Kind, t)));
         }
-        return -double.ExpM1(sum);
+        return sum;
+    }
+
+    /// <summary>How many of them on average with these chests: Σ p × boost (the same boosts as the chance).</summary>
+    public static double Expected(TreasureOdds odds, IEnumerable<DateTime> chestTimesUtc, long plainChests)
+    {
+        var p = 1.0 / odds.OneIn;
+        var sum = Math.Max(0, plainChests) * p;
+        foreach (var t in chestTimesUtc)
+        {
+            sum += Math.Min(0.999, p * Boost(odds.Kind, t));
+        }
+        return sum;
     }
 
     /// <summary>Chests needed to reach a given cumulative chance (0.5 = "one chance in two").</summary>

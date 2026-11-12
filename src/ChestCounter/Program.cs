@@ -427,6 +427,7 @@ tracker.BetweenFiles = () =>
 tracker.StopRequested = () => quit;
 
 nextScan = DateTime.UtcNow.AddSeconds(backlog > 0 ? 1 : 2);
+var reportWeek = TreasureCatalog.ShownWeek(DateTime.UtcNow)?.Number;
 while (!quit)
 {
     if (DateTime.UtcNow >= nextScan)
@@ -461,6 +462,15 @@ while (!quit)
     if (auto && OperatingSystem.IsWindows())
     {
         CheckAutoClose();
+    }
+
+    // A new treasure week (Sunday): the chances of the weekly treasures start again from that week's chests, even for
+    // a counter left open with no match played.
+    var shownWeek = TreasureCatalog.ShownWeek(DateTime.UtcNow)?.Number;
+    if (shownWeek != reportWeek)
+    {
+        reportWeek = shownWeek;
+        ReportWriter.WriteAll(store, config, data);
     }
 
     if (Volatile.Read(ref imagesAdded))

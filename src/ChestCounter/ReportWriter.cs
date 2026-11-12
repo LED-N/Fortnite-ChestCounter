@@ -160,6 +160,8 @@ public static class ReportWriter
         td.nw{white-space:nowrap}
         .big{font-size:20px}
         .items{color:var(--cmuted);font-size:13px}
+        .sub{display:block;font-size:12px;font-weight:400;color:var(--cmuted)}
+        .chweek{margin:0 0 10px;font-size:14px;color:var(--ink)}
         .star{color:var(--star);font-weight:600}
         .gold{color:#b9821c}
         .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:10px;vertical-align:-1px}
@@ -593,6 +595,12 @@ public static class ReportWriter
     private static string Percent(double p)
     {
         var v = p * 100;
+        if (v >= 99.95)
+        {
+            // Would round to 100: at least once over many chests is never certain.
+            var most = 99.9.ToString("F1", Fr);
+            return L.Code == "en" ? $">{most}%" : $"> {most} %";
+        }
         var decimals = v >= 10 ? 1 : v <= 0 ? 0 : Math.Clamp((int)Math.Ceiling(-Math.Log10(v)) + 1, 1, 8);
         var text = v.ToString("F" + decimals, Fr);
         return L.Code == "en" ? text + "%" : text + " %";
@@ -602,8 +610,10 @@ public static class ReportWriter
         $"""<span class="info" tabindex="0" role="note" aria-label="{H(text)}">i<span class="infotip">{H(text)}</span></span>""";
 
     /// <summary>
-    /// "Your chances": for each kind of treasure, the chance of having obtained it at least once with the chests opened
-    /// so far (1 − (1 − p)^n).
+    /// "Your chances": for each kind of treasure, the chance of having obtained it at least once (1 − (1 − p)^n).
+    /// The kinds that change every week (gold outfit, vehicle and decal, pickaxe or back bling, jam track, loading
+    /// screen) count the chests of the week shown only: a chest only gives that week's item. Under them, the chance of
+    /// having had one of any week this season. Pirate Shop Access and gizmos count every chest of the hunt.
     /// </summary>
     private static string ChancesSection(int chests, IReadOnlyList<MatchRecord> matches)
     {
@@ -614,48 +624,145 @@ public static class ReportWriter
         }
 
         var sb = new StringBuilder();
-        var outfits = string.Join(" ", TreasureCatalog.Weeks.SelectMany(w => w.Prizes).Where(p => p.Kind == TreasureCatalog.GoldOutfit).Select(p => p.Id));
         // When each counted chest was opened (UTC): a chest of a Treasure Hour counts with the boosted odds.
         var chestTimes = matches.SelectMany(m => m.Chests.Select(c => DateTime.SpecifyKind(m.MatchStartUtc ?? m.AnalyzedAtUtc, DateTimeKind.Utc).ToUniversalTime().AddSeconds(c.TimeSeconds))).ToList();
-        var plain = Math.Max(0, chests - chestTimes.Count); // added by hand: time unknown, normal odds
-        var boosted = chestTimes.Count(t => TreasureCatalog.Boost(TreasureCatalog.GoldOutfit, t) > 1);
-        double Chance(TreasureOdds odds) => chests < chestTimes.Count
-            ? TreasureCatalog.AtLeastOnce(odds.OneIn, chests)
-            : TreasureCatalog.AtLeastOnce(odds, chestTimes, plain);
+        // Chests opened before the treasure hunt could not give a treasure.
+        var huntTimes = chestTimes.Where(t => t >= TreasureCatalog.HuntStart).ToList();
+        // Added by hand (the pencil): no date, so normal odds, and only for the kinds that do not change every week.
+        // A negative adjustment removes chests from the season (its boosts are then unknown).
+        var manual = chests - chestTimes.Count;
+        var seasonChests = Math.Max(0, huntTimes.Count + manual);
+        var week = TreasureCatalog.ShownWeek(now);
+        var weekTimes = week == null ? new List<DateTime>() : huntTimes.Where(t => t >= week.From && t < week.To).ToList();
+        var boosted = huntTimes.Count(t => TreasureCatalog.Boost(TreasureCatalog.GoldOutfit, t) > 1);
+
+        Chance Season(TreasureOdds odds) => manual >= 0
+            ? Chance.Of(odds, huntTimes, manual)
+            : Chance.Of(odds, Array.Empty<DateTime>(), seasonChests);
+        Chance Week(TreasureOdds odds) => Chance.Of(odds, weekTimes, 0);
+        Chance Shown(TreasureOdds odds) => odds.Weekly ? Week(odds) : Season(odds);
+
+        var huntDate = TreasureCatalog.HuntStart.ToLocalTime().ToString(L.T("d MMMM", "MMMM d", "d 'de' MMMM"), Fr);
+        var weekN = weekTimes.Count.ToString("N0", Fr);
+        var seasonN = seasonChests.ToString("N0", Fr);
+        var boostedN = boosted.ToString("N0", Fr);
         var chancesInfo = L.T(
-            $"Chaque coffre a toujours la même chance (par exemple 1 sur 1 562 500 pour la tenue en or) : elle n'augmente pas d'un coffre à l'autre. Ce qui augmente, c'est la chance d'avoir obtenu l'objet au moins une fois sur l'ensemble de tes {chests.ToString("N0", Fr)} coffres (ajoutés à la main compris) : 1 − (1 − 1/X)^N. Les coffres ouverts pendant une heure du trésor (« Treasure Hour », samedi 20h-22h et dimanche 3h-5h, heure de Paris) comptent avec leurs chances augmentées ({boosted.ToString("N0", Fr)} chez toi). Les coffres ouverts avant la chasse au trésor ne donnaient pas ces trésors. Cotes publiées par Epic Games, horaires d'après fortnite.bot.",
-            $"Every chest always has the same odds (for example 1 in 1,562,500 for the gold outfit): they do not grow from one chest to the next. What grows is the chance of having obtained the item at least once over all your {chests.ToString("N0", Fr)} chests (those added by hand included): 1 − (1 − 1/X)^N. Chests opened during a Treasure Hour (Saturday 19:00-21:00 and Sunday 02:00-04:00 UTC) count with their boosted odds ({boosted.ToString("N0", Fr)} of yours). Chests opened before the treasure hunt did not give these treasures. Odds published by Epic Games, times from fortnite.bot.",
-            $"Cada cofre tiene siempre la misma probabilidad (por ejemplo 1 entre 1.562.500 para el traje de oro): no aumenta de un cofre a otro. Lo que aumenta es la probabilidad de haber obtenido el objeto al menos una vez con todos tus {chests.ToString("N0", Fr)} cofres (incluidos los añadidos a mano): 1 − (1 − 1/X)^N. Los cofres abiertos durante una hora del tesoro («Treasure Hour», sábado 19:00-21:00 y domingo 02:00-04:00 UTC) cuentan con su probabilidad aumentada ({boosted.ToString("N0", Fr)} de los tuyos). Los cofres abiertos antes de la búsqueda del tesoro no daban estos tesoros. Probabilidades publicadas por Epic Games, horarios según fortnite.bot.");
+            $"Chaque coffre a toujours la même chance (par exemple 1 sur 1 562 500 pour la tenue en or) : elle n'augmente pas d'un coffre à l'autre. Ce qui augmente, c'est la chance d'avoir obtenu l'objet au moins une fois sur un ensemble de coffres : 1 − (1 − 1/X)^N. La tenue en or, le véhicule et autocollant, la pioche ou le sac à dos, la piste musicale et l'écran de chargement changent chaque semaine (le dimanche) : un coffre ne donne que ceux de sa semaine, donc leurs chances comptent les coffres de cette semaine ({weekN}) ; la petite ligne dessous est la chance d'en avoir eu un, de n'importe quelle semaine, sur toute la saison. L'accès à la boutique pirate et les gizmos comptent tous tes coffres de la chasse au trésor ({seasonN}). Les coffres ajoutés à la main n'ont pas de date : ils ne comptent que pour ces deux-là. Les coffres ouverts avant le début de la chasse au trésor ({huntDate}) ne donnaient pas ces trésors : ils ne comptent pas. Les coffres ouverts pendant une heure du trésor (« Treasure Hour », samedi 20h-22h et dimanche 3h-5h, heure de Paris) comptent avec leurs chances augmentées ({boostedN} chez toi). Cotes publiées par Epic Games, horaires d'après fortnite.bot.",
+            $"Every chest always has the same odds (for example 1 in 1,562,500 for the gold outfit): they do not grow from one chest to the next. What grows is the chance of having obtained the item at least once over many chests: 1 − (1 − 1/X)^N. The gold outfit, vehicle & decal, pickaxe or back bling, jam track and loading screen change every week (on Sunday): a chest only gives that week's ones, so their chances count the chests of this week ({weekN}); the smaller line under them is the chance of having had one, of any week, over the whole season. Pirate Shop Access and gizmos count all your chests of the treasure hunt ({seasonN}). Chests added by hand have no date: they only count for these two. Chests opened before the treasure hunt started ({huntDate}) did not give these treasures: they are not counted. Chests opened during a Treasure Hour (Saturday 19:00-21:00 and Sunday 02:00-04:00 UTC) count with their boosted odds ({boostedN} of yours). Odds published by Epic Games, times from fortnite.bot.",
+            $"Cada cofre tiene siempre la misma probabilidad (por ejemplo 1 entre 1.562.500 para el traje de oro): no aumenta de un cofre a otro. Lo que aumenta es la probabilidad de haber obtenido el objeto al menos una vez en un conjunto de cofres: 1 − (1 − 1/X)^N. El traje de oro, el vehículo y adhesivo, el pico o la mochila, la pista musical y la pantalla de carga cambian cada semana (el domingo): un cofre solo da los de su semana, así que sus probabilidades cuentan los cofres de esta semana ({weekN}); la línea pequeña de debajo es la probabilidad de haber conseguido uno, de cualquier semana, en toda la temporada. El acceso a la tienda pirata y los artilugios cuentan todos tus cofres de la búsqueda del tesoro ({seasonN}). Los cofres añadidos a mano no tienen fecha: solo cuentan para estos dos. Los cofres abiertos antes del inicio de la búsqueda del tesoro ({huntDate}) no daban estos tesoros: no se cuentan. Los cofres abiertos durante una hora del tesoro («Treasure Hour», sábado 19:00-21:00 y domingo 02:00-04:00 UTC) cuentan con su probabilidad aumentada ({boostedN} de los tuyos). Probabilidades publicadas por Epic Games, horarios según fortnite.bot.");
         sb.Append(FoldStart("chances", L.T("Tes chances", "Your chances", "Tus probabilidades"), open: true, Info(chancesInfo)));
-        sb.Append($"{TreasureHourBanner()}<div class=\"chances\">");
+        sb.Append(TreasureHourBanner());
+        if (week != null)
+        {
+            var since = week.From.ToLocalTime().ToString(L.T("dddd d MMMM, HH:mm", "dddd, MMMM d, HH:mm", "dddd d 'de' MMMM, HH:mm"), Fr);
+            var weekChests = L.Count(weekTimes.Count, "coffre", "coffres", "chest", "chests", "cofre", "cofres");
+            sb.Append($"<div class=\"chweek\">{L.T("Semaine", "Week", "Semana")} {week.Number} · {H(week.Title)} · <b>{weekChests} {L.T("cette semaine", "this week", "esta semana")}</b> <span class=\"items\">({L.T("depuis", "since", "desde")} {since})</span></div>");
+        }
+        sb.Append("<div class=\"chances\">");
 
         string Big(TreasureOdds odds, string items)
         {
-            var p = Chance(odds);
+            var c = Shown(odds);
             var half = TreasureCatalog.ChestsFor(odds.OneIn, 0.5);
-            var left = Math.Max(0, half - chests);
-            var width = Math.Clamp(p * 100, 0.6, 100).ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+            var left = Math.Max(0, half - c.Chests);
+            var width = Math.Clamp(c.P * 100, 0.6, 100).ToString("F1", CultureInfo.InvariantCulture);
+            var n = c.Chests.ToString("N0", Fr);
+            var label = odds.Weekly
+                ? L.T($"de chances d'avoir eu celle de cette semaine au moins une fois avec tes {n} coffres de la semaine", $"chance of having had this week's one at least once with your {n} chests this week", $"de probabilidad de haber conseguido el de esta semana al menos una vez con tus {n} cofres de la semana")
+                : L.T($"de chances de l'avoir eu au moins une fois avec tes {n} coffres", $"chance of having had it at least once with your {n} chests", $"de probabilidad de haberlo conseguido al menos una vez con tus {n} cofres");
+            var season = "";
+            if (odds.Weekly)
+            {
+                var s = Season(odds);
+                var sn = s.Chests.ToString("N0", Fr);
+                var sp = PercentHtml(s);
+                season = $"<div class=\"s\">{L.T($"N'importe quelle semaine, sur la saison : {sp} avec tes {sn} coffres", $"Any week, over the season: {sp} with your {sn} chests", $"Cualquier semana, en la temporada: {sp} con tus {sn} cofres")}</div>";
+            }
+            var perChest = L.T($"1 sur {odds.OneIn.ToString("N0", Fr)} à chaque coffre · une chance sur deux vers {half.ToString("N0", Fr)} coffres", $"1 in {odds.OneIn.ToString("N0", Fr)} per chest · one chance in two at about {half.ToString("N0", Fr)} chests", $"1 entre {odds.OneIn.ToString("N0", Fr)} por cofre · una de cada dos hacia {half.ToString("N0", Fr)} cofres");
+            var toGo = left > 0 ? L.T($" (encore {left.ToString("N0", Fr)})", $" ({left.ToString("N0", Fr)} to go)", $" (faltan {left.ToString("N0", Fr)})") : "";
             return $"""
-                <div class="odds" data-items="{items}" data-kind="{odds.Kind}" data-p="{p.ToString("R", System.Globalization.CultureInfo.InvariantCulture)}"><div class="k"><span>{H(TreasureCatalog.KindName(odds.Kind))}<span class="boost" hidden></span></span><span class="gotbadge">✓ {L.T("obtenu", "obtained", "obtenido")}</span></div>
-                <div class="v num">{Percent(p)}</div>
-                <div class="l">{L.T($"de chances de l'avoir eu au moins une fois avec tes {chests.ToString("N0", Fr)} coffres", $"chance of having had it at least once with your {chests.ToString("N0", Fr)} chests", $"de probabilidad de haberlo conseguido al menos una vez con tus {chests.ToString("N0", Fr)} cofres")}</div>
+                <div class="odds" data-items="{items}" data-kind="{odds.Kind}" data-p="{c.P.ToString("R", CultureInfo.InvariantCulture)}"><div class="k"><span>{H(TreasureCatalog.KindName(odds.Kind))}<span class="boost" hidden></span></span><span class="gotbadge">✓ {L.T("obtenu", "obtained", "obtenido")}</span></div>
+                <div class="v num">{PercentHtml(c)}</div>
+                <div class="l">{label}</div>
                 <span class="meter wide"><i style="width:{width}%"></i></span>
-                <div class="s sline">{L.T($"1 sur {odds.OneIn.ToString("N0", Fr)} à chaque coffre · une chance sur deux vers {half.ToString("N0", Fr)} coffres", $"1 in {odds.OneIn.ToString("N0", Fr)} per chest · one chance in two at about {half.ToString("N0", Fr)} chests", $"1 entre {odds.OneIn.ToString("N0", Fr)} por cofre · una de cada dos hacia {half.ToString("N0", Fr)} cofres")}{(left > 0 ? L.T($" (encore {left.ToString("N0", Fr)})", $" ({left.ToString("N0", Fr)} to go)", $" (faltan {left.ToString("N0", Fr)})") : "")}</div></div>
+                <div class="s sline">{perChest}{toGo}</div>{season}</div>
                 """;
         }
+        // The gold outfit card is "obtained" when this week's outfit is ticked (any outfit before the hunt starts).
+        var outfitWeeks = week == null ? TreasureCatalog.Weeks : new[] { week };
+        var outfits = string.Join(" ", outfitWeeks.SelectMany(w => w.Prizes).Where(p => p.Kind == TreasureCatalog.GoldOutfit).Select(p => p.Id));
         sb.Append(Big(TreasureCatalog.Odds.First(o => o.Kind == TreasureCatalog.GoldOutfit), outfits));
         sb.Append(Big(TreasureCatalog.Odds.First(o => o.Kind == TreasureCatalog.PirateShop), TreasureCatalog.PirateShop));
         sb.Append("</div>");
 
-        // The other kinds: chance of at least one, and how many of them on average with that many chests.
+        // The other kinds: chance of at least one, and how many of them on average with those chests (same boosts).
+        // Weekly kinds: this week, then the whole season (any week) in a smaller line.
+        static string Avg(double average) => average.ToString(average >= 10 ? "N0" : "N1", Fr);
+        var colon = L.Code == "fr" ? " : " : ": ";
+        var seasonWord = L.T("saison", "season", "temporada");
         sb.Append($"<div class=\"card\" style=\"margin-top:12px\"><table><tr><th>{L.T("Trésor", "Treasure", "Tesoro")}</th><th style=\"text-align:right\">{L.T("Par coffre", "Per chest", "Por cofre")}</th><th style=\"text-align:right\">{L.T("Au moins un", "At least one", "Al menos uno")}</th><th style=\"text-align:right\">{L.T("En moyenne", "On average", "En promedio")}</th></tr>");
         foreach (var odds in TreasureCatalog.Odds.Where(o => o.Kind is not (TreasureCatalog.GoldOutfit or TreasureCatalog.PirateShop)))
         {
-            var average = (double)chests / odds.OneIn;
-            sb.Append($"<tr data-kind=\"{odds.Kind}\"><td>{H(TreasureCatalog.KindName(odds.Kind))}<span class=\"boost\" hidden></span>{(odds.Weekly ? $" <span class=\"items\">· {L.T("change chaque semaine", "changes every week", "cambia cada semana")}</span>" : "")}</td><td class=\"n num pc\">1 / {odds.OneIn.ToString("N0", Fr)}</td><td class=\"n num\">{Percent(Chance(odds))}</td><td class=\"n num\">{average.ToString(average >= 10 ? "N0" : "N1", Fr)}</td></tr>");
+            var c = Shown(odds);
+            var atLeast = PercentHtml(c);
+            var average = Avg(c.Average);
+            if (odds.Weekly)
+            {
+                var s = Season(odds);
+                atLeast += $"<span class=\"sub\">{seasonWord}{colon}{PercentHtml(s)}</span>";
+                average += $"<span class=\"sub\">{seasonWord}{colon}{Avg(s.Average)}</span>";
+            }
+            var note = odds.Weekly
+                ? L.T("cette semaine, change chaque semaine", "this week, changes every week", "esta semana, cambia cada semana")
+                : L.T("toute la saison", "whole season", "toda la temporada");
+            sb.Append($"<tr data-kind=\"{odds.Kind}\"><td>{H(TreasureCatalog.KindName(odds.Kind))}<span class=\"boost\" hidden></span> <span class=\"items\">· {note}</span></td><td class=\"n num pc\">1 / {odds.OneIn.ToString("N0", Fr)}</td><td class=\"n num\">{atLeast}</td><td class=\"n num\">{average}</td></tr>");
         }
         sb.Append($"</table></div>{FoldEnd}");
         return sb.ToString();
+    }
+
+    /// <summary>A chance of "at least once" and what it is based on.</summary>
+    /// <param name="P">Chance of at least once (rounds to exactly 1 for the common kinds).</param>
+    /// <param name="LogNever">Natural log of the chance of never: still exact when <paramref name="P"/> is 1.</param>
+    /// <param name="Average">How many of them on average.</param>
+    /// <param name="Chests">Chests counted.</param>
+    private readonly record struct Chance(double P, double LogNever, double Average, int Chests)
+    {
+        public static Chance Of(TreasureOdds odds, IReadOnlyCollection<DateTime> times, long plain)
+        {
+            var log = TreasureCatalog.LogNever(odds, times, plain);
+            return new Chance(-double.ExpM1(log), log, TreasureCatalog.Expected(odds, times, plain), (int)(times.Count + Math.Max(0, plain)));
+        }
+    }
+
+    /// <summary>
+    /// A chance as text, never "100%": at least once over many chests is never certain. Close to it, the exact gap is
+    /// in the tooltip ("never had it: 1 chance in 5.2 × 10²⁷").
+    /// </summary>
+    private static string PercentHtml(Chance c)
+    {
+        var text = Percent(c.P);
+        if (c.P * 100 < 99.95)
+        {
+            return text;
+        }
+        var x = OneIn(c.LogNever);
+        var never = L.T($"ne pas l'avoir eu : 1 chance sur {x}", $"never had it: 1 chance in {x}", $"no haberlo conseguido: 1 entre {x}");
+        return $"<span title=\"{H(never)}\">{text}</span>";
+    }
+
+    /// <summary>"1 in X" from the log of a tiny chance: X written plainly up to a billion, then as a power of ten.</summary>
+    private static string OneIn(double logChance)
+    {
+        var log10 = -logChance / Math.Log(10);
+        if (log10 < 9)
+        {
+            return Math.Round(Math.Exp(-logChance)).ToString("N0", Fr);
+        }
+        var exp = (int)Math.Floor(log10);
+        var mantissa = Math.Pow(10, log10 - exp);
+        const string sup = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+        return $"{mantissa.ToString("F1", Fr)} × 10{string.Concat(exp.ToString(CultureInfo.InvariantCulture).Select(d => sup[d - '0']))}";
     }
 
     /// <summary>The collection of this season's treasures, to tick what was obtained (folded by default).</summary>
