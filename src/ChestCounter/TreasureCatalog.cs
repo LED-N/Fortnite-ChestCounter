@@ -61,7 +61,13 @@ public static class TreasureCatalog
 
     /// <summary>The data in use (swapped as a whole when a newer content.json is accepted).</summary>
     private sealed record Data(int Revision, IReadOnlyList<TreasureOdds> Odds, TreasurePrize PirateShopAccess, IReadOnlyList<TreasureWeek> Weeks,
-        IReadOnlyList<TreasureHour> TreasureHours, IReadOnlyList<Notice> Notices);
+        IReadOnlyList<TreasureHour> TreasureHours, IReadOnlyList<Notice> Notices, string OddsSource, string HoursSource);
+
+    /// <summary>Where the odds were published (Epic Games), when content.json does not say.</summary>
+    public const string DefaultOddsSource = "https://x.com/FortniteStatus/status/2119202610322227327";
+
+    /// <summary>Where the Treasure Hour times come from, when content.json does not say.</summary>
+    public const string DefaultHoursSource = "https://fortnite.bot";
 
     private static volatile Data? _loaded;
 
@@ -78,6 +84,12 @@ public static class TreasureCatalog
     public static IReadOnlyList<TreasureWeek> Weeks => _data.Weeks;
     public static IReadOnlyList<TreasureHour> TreasureHours => _data.TreasureHours;
     public static IReadOnlyList<Notice> Notices => _data.Notices;
+
+    /// <summary>Page where Epic Games published the odds ("sources.odds" in content.json).</summary>
+    public static string OddsSource => _data.OddsSource;
+
+    /// <summary>Page the Treasure Hour times come from ("sources.treasureHours" in content.json).</summary>
+    public static string HoursSource => _data.HoursSource;
 
     /// <summary>Notices to show now.</summary>
     public static IEnumerable<Notice> ActiveNotices(DateTime utc) => Notices.Where(n => utc >= n.FromUtc && utc < n.ToUtc && n.Concerns(AppInfo.Version));
@@ -230,7 +242,13 @@ public static class TreasureCatalog
 
             var pirate = Prize(root.GetProperty("pirateShop"));
             if (pirate.Kind != PirateShop) throw new InvalidDataException("pirateShop");
-            return new Data(revision, odds, pirate, weeks, hours, notices);
+
+            // Source links shown under "Your chances": https only, optional.
+            string Source(string name, string fallback) =>
+                root.TryGetProperty("sources", out var src) && src.TryGetProperty(name, out var v)
+                    ? (v.GetString() is { Length: <= 300 } url && Uri.TryCreate(url, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps ? url : throw new InvalidDataException("sources." + name))
+                    : fallback;
+            return new Data(revision, odds, pirate, weeks, hours, notices, Source("odds", DefaultOddsSource), Source("treasureHours", DefaultHoursSource));
         }
         catch (Exception ex)
         {
