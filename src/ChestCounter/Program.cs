@@ -146,6 +146,7 @@ if (L.Normalize(config.Language) == null)
     config.Language = L.Normalize(previousLanguage) ?? L.SystemDefault;
 }
 L.Set(config.Language);
+config.ApplyTimeSettings();
 var appName = L.T("Compteur de coffres Fortnite", "Fortnite Chest Counter", "Contador de cofres de Fortnite");
 
 if (demosArg != null) config.DemosFolder = demosArg;
@@ -427,6 +428,7 @@ tracker.BetweenFiles = () =>
 tracker.StopRequested = () => quit;
 
 nextScan = DateTime.UtcNow.AddSeconds(backlog > 0 ? 1 : 2);
+var reportWeek = TreasureCatalog.ShownWeek(DateTime.UtcNow)?.Number;
 while (!quit)
 {
     if (DateTime.UtcNow >= nextScan)
@@ -461,6 +463,15 @@ while (!quit)
     if (auto && OperatingSystem.IsWindows())
     {
         CheckAutoClose();
+    }
+
+    // A new treasure week (Sunday): the chances of the weekly treasures start again from that week's chests, even for
+    // a counter left open with no match played.
+    var shownWeek = TreasureCatalog.ShownWeek(DateTime.UtcNow)?.Number;
+    if (shownWeek != reportWeek)
+    {
+        reportWeek = shownWeek;
+        ReportWriter.WriteAll(store, config, data);
     }
 
     if (Volatile.Read(ref imagesAdded))
@@ -889,7 +900,7 @@ object BuildGuiState()
         manual = view.ManualAdjust,
         session = L.N(session.Sum(m => m.ChestsOpened)),
         sessionMatches = L.N(session.Count),
-        last = last == null ? null : new { chests = L.N(last.ChestsOpened), when = L.DateTimeShort((last.MatchStartUtc ?? last.AnalyzedAtUtc).ToLocalTime()), mode = Pretty.Playlist(last.Playlist) },
+        last = last == null ? null : new { chests = L.N(last.ChestsOpened), when = L.DateTimeShort(L.Shown(last.MatchStartUtc ?? last.AnalyzedAtUtc)), mode = Pretty.Playlist(last.Playlist) },
         squad = config.ShowSquadTotal && view.TeamChests > 0 ? new { total = L.N(view.SquadChests), team = L.N(view.TeamChests) } : null,
         treasures = L.N(matches.Sum(m => m.TreasureFinds.Count)),
         matches = L.N(matches.Count),
@@ -924,6 +935,10 @@ object BuildGuiState()
             startWithFortnite = config.StartWithFortnite,
             canStartWithFortnite = OperatingSystem.IsWindows() && AppInfo.ExePath != null,
             updateMode = config.UpdateMode,
+            timeZone = config.TimeZone,
+            clockFormat = config.ClockFormat,
+            localZone = L.LocalOffset,
+            windowsClock = L.WindowsClock24 ? "24" : "12",
             demos = config.DemosFolder,
             demosExists = Directory.Exists(config.DemosFolder),
         },
@@ -1009,6 +1024,8 @@ object? RunGuiAction(string name, System.Text.Json.JsonElement value)
             break;
         case "startWithFortnite": if (Bool() != config.StartWithFortnite) ToggleStartWithFortnite(); break;
         case "updateMode": config.UpdateMode = Str() is "auto" or "off" ? Str() : "prompt"; break;
+        case "timeZone": config.TimeZone = Str(); config.ApplyTimeSettings(); break;
+        case "clockFormat": config.ClockFormat = Str(); config.ApplyTimeSettings(); break;
         case "demosFolder":
             if (Str().Trim().Trim('"') is { Length: > 0 } folder && folder != config.DemosFolder)
             {

@@ -145,6 +145,21 @@ public sealed class Config
     /// <summary>"prompt" (offer new versions), "auto" (install them) or "off" (never check GitHub).</summary>
     public string UpdateMode { get; set; } = "prompt";
 
+    /// <summary>Times shown in "local" time (the PC's time zone) or in "utc".</summary>
+    public string TimeZone { get; set; } = "local";
+
+    /// <summary>Clock of the times shown: "auto" (the Windows setting), "12" (10:54 PM) or "24" (22:54).</summary>
+    public string ClockFormat { get; set; } = "auto";
+
+    /// <summary>Applies the time settings to every time shown (<see cref="L.Shown"/>, <see cref="L.Clock"/>).</summary>
+    public void ApplyTimeSettings()
+    {
+        TimeZone = TimeZone == "utc" ? "utc" : "local";
+        ClockFormat = ClockFormat is "12" or "24" ? ClockFormat : "auto";
+        L.UtcTimes = TimeZone == "utc";
+        L.ClockFormat = ClockFormat;
+    }
+
     /// <summary>Notices of content.json the player closed (by id), so that they do not come back.</summary>
     public List<string> DismissedNotices { get; set; } = new();
 

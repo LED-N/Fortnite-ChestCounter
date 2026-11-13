@@ -116,7 +116,11 @@ public static class ReportWriter
 
     private static string H(string? s) => WebUtility.HtmlEncode(s ?? "");
 
-    private static DateTime When(MatchRecord m) => (m.MatchStartUtc ?? m.AnalyzedAtUtc).ToLocalTime();
+    /// <summary>Start of a match as shown (local time or UTC, from the settings).</summary>
+    private static DateTime When(MatchRecord m) => L.Shown(m.MatchStartUtc ?? m.AnalyzedAtUtc);
+
+    /// <summary>A short date and time ("Nov 8, 6:00 AM"), shown in local time or UTC.</summary>
+    private static string ShortWhen(DateTime utc) => L.Shown(utc).ToString(L.T("d MMM ", "MMM d, ", "d MMM ") + L.TimePattern(), Fr) + L.Zone;
 
     // "Logbook" look (direction A): parchment cards on a night-sea background (a day version follows Windows' light
     // mode). Titles use the embedded Pirata One font; figures use Bahnschrift, installed with Windows.
@@ -160,6 +164,93 @@ public static class ReportWriter
         td.nw{white-space:nowrap}
         .big{font-size:20px}
         .items{color:var(--cmuted);font-size:13px}
+        /* Your chances */
+        .ch-intro{margin:0 0 12px;color:var(--muted);font-size:14px;max-width:760px}
+        .chances2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+        @media (max-width:820px){.chances2{grid-template-columns:1fr}}
+        .hcard{background:var(--card);color:var(--cink);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+        .hcard.got{border-color:var(--team);box-shadow:inset 6px 0 0 var(--team);padding-left:22px}
+        .hcard.boosted{border-color:#e2702f;box-shadow:inset 6px 0 0 #e2702f;padding-left:22px}
+        .htop{display:flex;align-items:center;gap:10px}
+        .cthumb{width:44px;height:44px;border-radius:6px;object-fit:cover;background:var(--track);flex:none}
+        .hname{flex:1;min-width:0}
+        .hname .k{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--cmuted)}
+        .ciname{font-weight:700;font-size:15px}
+        .hval{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+        .hval .big{font-size:40px;font-weight:700;line-height:1.05}
+        .hexp{font-size:14px}
+        .hcard .s{font-size:13px;color:var(--cmuted)}
+        .cfoot{font-size:13px;color:var(--cmuted);border-top:1px dashed var(--line);padding-top:6px;margin-top:2px}
+        .halfway{margin-top:2px}.hrow{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--cmuted)}
+        .tag{display:inline-block;padding:2px 9px;border-radius:999px;font:700 11px "Segoe UI",system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;flex:none}
+        .tag.weekly{background:#2c5d8a;color:#fff}
+        .tag.season{background:#6c3fb5;color:#fff}
+        .chances2 .gotbadge,.ctable .gotbadge{display:none;padding:2px 8px;border-radius:999px;background:var(--team);color:#fff;font:700 11px "Segoe UI",system-ui,sans-serif;margin-left:8px;white-space:nowrap}
+        .got .gotbadge{display:inline-block!important}
+        .vchip{display:inline-block;padding:2px 9px;border-radius:999px;font:600 12px "Segoe UI",system-ui,sans-serif;white-space:nowrap}
+        .vchip.vunlikely{background:#e4d3ad;color:#6b5a44}
+        .vchip.unlikely{background:#f0d9a8;color:#7a5410}
+        .vchip.possible{background:#f6cf86;color:#6d4300}
+        .vchip.likely{background:#cfe3c0;color:#2f5a1c}
+        .vchip.vlikely{background:#b7dcae;color:#1f4d14}
+        .vchip.certain{background:#2f7d4f;color:#fff}
+        .cbar{display:block;height:6px;background:var(--track);border-radius:3px;overflow:hidden;margin-top:5px}
+        .cbar.wide{width:100%}
+        .cbar i{display:block;height:6px;border-radius:3px}
+        .cbar i.vunlikely,.cbar i.unlikely{background:#c9a24f}.cbar i.possible{background:#d68a1c}
+        .cbar i.likely,.cbar i.vlikely{background:#5f9c4a}.cbar i.certain{background:#2f7d4f}.cbar i.gold{background:#b9821c}
+        .cgroup{margin-top:18px}
+        .ghead{display:flex;align-items:center;gap:10px;margin:0 0 8px}
+        .ghead .gt{font-weight:700;font-size:16px;color:var(--ink2)}
+        .ghead .gs{font-size:13px;color:var(--muted)}
+        .cdbox{margin-left:auto;text-align:right;flex:none}
+        .cdbox .cdl{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+        .cdbox .cd{font:700 18px "Segoe UI",system-ui,sans-serif;color:var(--ink2)}
+        .cd{font-variant-numeric:tabular-nums}.cd.soon{color:#f0a04b}
+        .thour .ics{margin-left:8px;font-weight:600;color:inherit}
+        .ctable:not(.mini){table-layout:fixed;width:100%}
+        .ctable:not(.mini) th:nth-child(1){width:38%}
+        .ctable:not(.mini) th:nth-child(2){width:16%}
+        .ctable:not(.mini) th:nth-child(3){width:32%}
+        .ctable:not(.mini) th:nth-child(4){width:14%}
+        .ctable th.r,.ctable td.n{text-align:right}
+        .ctable td.n{white-space:nowrap;font-weight:700}
+        .ctable td{vertical-align:middle}
+        .tflex{display:flex;align-items:center;gap:10px}
+        .thumb{width:36px;height:36px;border-radius:6px;object-fit:cover;background:var(--track);flex:none}
+        .tk{font-weight:600}
+        .iname{display:block;font-size:12px;color:var(--cmuted)}
+        .tchance{min-width:0}
+        .tcv{display:flex;align-items:center;justify-content:space-between;gap:8px}
+        tr.got .tk{color:var(--team)}
+        tr.boosted td:first-child{box-shadow:inset 4px 0 0 #e2702f;padding-left:14px}
+        .cmore{margin-top:14px;color:var(--ink)}
+        .cmore summary{cursor:pointer;font-weight:600;color:var(--ink2)}
+        .cmore p,.cmore ul{color:var(--muted);font-size:14px;max-width:760px}
+        .cmore li{margin:4px 0}
+        .cmore a{color:var(--title)}
+        .ctable.mini td,.ctable.mini th{padding-top:6px;padding-bottom:6px}
+        time[title]{border-bottom:1px dotted currentColor;cursor:help}
+        .mo{display:none}
+        @media (max-width:600px){
+          .ctable th:nth-child(2),.ctable td.pc{display:none}
+          .ctable:not(.mini) th:nth-child(1){width:42%}
+          .ctable:not(.mini) th:nth-child(3){width:38%}
+          .ctable:not(.mini) th:nth-child(4){width:20%}
+          .iname.mo{display:block}
+          .thumb{display:none}
+          .ctable th{white-space:normal;letter-spacing:.04em}
+          .tcard{padding:4px 10px}
+          /* Word and percentage do not fit side by side: the percentage goes under the word */
+          .tcv{flex-wrap:wrap;justify-content:flex-start;gap:2px 8px}
+          .ctable td.n{white-space:normal}
+          .tk{display:flex;flex-wrap:wrap;align-items:center;gap:4px}.tk .gotbadge{margin-left:0}
+          .hval .big{font-size:34px}
+          .ghead{align-items:flex-start;flex-wrap:wrap}
+          .cdbox{margin-left:0;text-align:left;width:100%;padding-left:2px}
+        }
+        /* A treasure the counter ticked by itself (seen in the replays): checked, not greyed, cannot be unticked */
+        .prize input[data-auto]{cursor:default}
         .star{color:var(--star);font-weight:600}
         .gold{color:#b9821c}
         .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:10px;vertical-align:-1px}
@@ -327,9 +418,9 @@ public static class ReportWriter
         var sb = new StringBuilder();
         var title = L.T("Compteur de coffres", "Chest Counter", "Contador de cofres");
         var updated = L.T(
-            $"Mis à jour le {DateTime.Now.ToString("dd/MM/yyyy à HH:mm:ss", Fr)} · actualisation auto",
-            $"Updated {DateTime.Now.ToString("d MMM yyyy 'at' HH:mm:ss", Fr)} · auto refresh",
-            $"Actualizado el {DateTime.Now.ToString("dd/MM/yyyy 'a las' HH:mm:ss", Fr)} · actualización automática");
+            $"Mis à jour le {L.Shown(DateTime.UtcNow).ToString("dd/MM/yyyy", Fr)} à {L.Clock(L.Shown(DateTime.UtcNow), seconds: true)} · actualisation auto",
+            $"Updated {L.Shown(DateTime.UtcNow).ToString("d MMM yyyy", Fr)} at {L.Clock(L.Shown(DateTime.UtcNow), seconds: true)} · auto refresh",
+            $"Actualizado el {L.Shown(DateTime.UtcNow).ToString("dd/MM/yyyy", Fr)} a las {L.Clock(L.Shown(DateTime.UtcNow), seconds: true)} · actualización automática");
         string Tile(string value, string label, string? sub = null) =>
             $"""<div class="tile"><div class="v num">{value}</div><div class="l">{label}</div>{(sub != null ? $"<div class=\"s\">{sub}</div>" : "")}</div>""";
 
@@ -355,7 +446,7 @@ public static class ReportWriter
             """);
 
         // Last 30 days, one bar per day (the best day stands out).
-        var today = DateTime.Now.Date;
+        var today = L.Shown(DateTime.UtcNow).Date;
         var days = Enumerable.Range(0, 30).Select(i => today.AddDays(i - 29)).ToList();
         var perDay = days.Select(d => matches.Where(m => When(m).Date == d).Sum(m => m.ChestsOpened)).ToList();
         var max = Math.Max(1, perDay.Max());
@@ -555,7 +646,7 @@ public static class ReportWriter
               });
             }
             [].forEach.call(boxes,function(c){
-              if(!c.disabled&&!c.hasAttribute('data-saved'))c.checked=!!ok[c.getAttribute('data-prize')];
+              if(c.hasAttribute('data-auto'))return;if(!c.hasAttribute('data-saved'))c.checked=!!ok[c.getAttribute('data-prize')];
               c.addEventListener('change',function(){var id=c.getAttribute('data-prize');if(c.checked)ok[id]=1;else delete ok[id];put('chestcounter-obtained',JSON.stringify(ok));send(id,c.checked);refresh()});
             });
             refresh();
@@ -593,6 +684,12 @@ public static class ReportWriter
     private static string Percent(double p)
     {
         var v = p * 100;
+        if (v >= 99.95)
+        {
+            // Would round to 100: at least once over many chests is never certain.
+            var most = 99.9.ToString("F1", Fr);
+            return L.Code == "en" ? $">{most}%" : $"> {most} %";
+        }
         var decimals = v >= 10 ? 1 : v <= 0 ? 0 : Math.Clamp((int)Math.Ceiling(-Math.Log10(v)) + 1, 1, 8);
         var text = v.ToString("F" + decimals, Fr);
         return L.Code == "en" ? text + "%" : text + " %";
@@ -602,8 +699,11 @@ public static class ReportWriter
         $"""<span class="info" tabindex="0" role="note" aria-label="{H(text)}">i<span class="infotip">{H(text)}</span></span>""";
 
     /// <summary>
-    /// "Your chances": for each kind of treasure, the chance of having obtained it at least once with the chests opened
-    /// so far (1 − (1 − p)^n).
+    /// "Your chances": for each kind of treasure, the chance it already dropped at least once (1 − (1 − p)^n), with a
+    /// word for it ("Very likely"). The kinds that change every week (gold outfit, vehicle and decal, pickaxe or back
+    /// bling, jam track, loading screen) count the chests of the week shown only: a chest only gives that week's item.
+    /// Pirate Shop Access and gizmos count every chest of the hunt. The weekly ones over the whole season and the way
+    /// it is computed are in two folded parts at the bottom.
     /// </summary>
     private static string ChancesSection(int chests, IReadOnlyList<MatchRecord> matches)
     {
@@ -614,48 +714,292 @@ public static class ReportWriter
         }
 
         var sb = new StringBuilder();
-        var outfits = string.Join(" ", TreasureCatalog.Weeks.SelectMany(w => w.Prizes).Where(p => p.Kind == TreasureCatalog.GoldOutfit).Select(p => p.Id));
+        static DateTime Start(MatchRecord m) => DateTime.SpecifyKind(m.MatchStartUtc ?? m.AnalyzedAtUtc, DateTimeKind.Utc).ToUniversalTime();
         // When each counted chest was opened (UTC): a chest of a Treasure Hour counts with the boosted odds.
-        var chestTimes = matches.SelectMany(m => m.Chests.Select(c => DateTime.SpecifyKind(m.MatchStartUtc ?? m.AnalyzedAtUtc, DateTimeKind.Utc).ToUniversalTime().AddSeconds(c.TimeSeconds))).ToList();
-        var plain = Math.Max(0, chests - chestTimes.Count); // added by hand: time unknown, normal odds
-        var boosted = chestTimes.Count(t => TreasureCatalog.Boost(TreasureCatalog.GoldOutfit, t) > 1);
-        double Chance(TreasureOdds odds) => chests < chestTimes.Count
-            ? TreasureCatalog.AtLeastOnce(odds.OneIn, chests)
-            : TreasureCatalog.AtLeastOnce(odds, chestTimes, plain);
-        var chancesInfo = L.T(
-            $"Chaque coffre a toujours la même chance (par exemple 1 sur 1 562 500 pour la tenue en or) : elle n'augmente pas d'un coffre à l'autre. Ce qui augmente, c'est la chance d'avoir obtenu l'objet au moins une fois sur l'ensemble de tes {chests.ToString("N0", Fr)} coffres (ajoutés à la main compris) : 1 − (1 − 1/X)^N. Les coffres ouverts pendant une heure du trésor (« Treasure Hour », samedi 20h-22h et dimanche 3h-5h, heure de Paris) comptent avec leurs chances augmentées ({boosted.ToString("N0", Fr)} chez toi). Les coffres ouverts avant la chasse au trésor ne donnaient pas ces trésors. Cotes publiées par Epic Games, horaires d'après fortnite.bot.",
-            $"Every chest always has the same odds (for example 1 in 1,562,500 for the gold outfit): they do not grow from one chest to the next. What grows is the chance of having obtained the item at least once over all your {chests.ToString("N0", Fr)} chests (those added by hand included): 1 − (1 − 1/X)^N. Chests opened during a Treasure Hour (Saturday 19:00-21:00 and Sunday 02:00-04:00 UTC) count with their boosted odds ({boosted.ToString("N0", Fr)} of yours). Chests opened before the treasure hunt did not give these treasures. Odds published by Epic Games, times from fortnite.bot.",
-            $"Cada cofre tiene siempre la misma probabilidad (por ejemplo 1 entre 1.562.500 para el traje de oro): no aumenta de un cofre a otro. Lo que aumenta es la probabilidad de haber obtenido el objeto al menos una vez con todos tus {chests.ToString("N0", Fr)} cofres (incluidos los añadidos a mano): 1 − (1 − 1/X)^N. Los cofres abiertos durante una hora del tesoro («Treasure Hour», sábado 19:00-21:00 y domingo 02:00-04:00 UTC) cuentan con su probabilidad aumentada ({boosted.ToString("N0", Fr)} de los tuyos). Los cofres abiertos antes de la búsqueda del tesoro no daban estos tesoros. Probabilidades publicadas por Epic Games, horarios según fortnite.bot.");
-        sb.Append(FoldStart("chances", L.T("Tes chances", "Your chances", "Tus probabilidades"), open: true, Info(chancesInfo)));
-        sb.Append($"{TreasureHourBanner()}<div class=\"chances\">");
+        var chestTimes = matches.SelectMany(m => m.Chests.Select(c => Start(m).AddSeconds(c.TimeSeconds))).ToList();
+        // Chests opened before the treasure hunt could not give a treasure.
+        var huntStart = TreasureCatalog.HuntStart;
+        var huntEnd = TreasureCatalog.Weeks[^1].To;
+        var huntTimes = chestTimes.Where(t => t >= huntStart).OrderBy(t => t).ToList();
+        // Added by hand (the pencil): no date, so normal odds, and never in a single week. A negative adjustment removes
+        // chests from the season (its boosts are then unknown).
+        var manual = chests - chestTimes.Count;
+        var seasonChests = Math.Max(0, huntTimes.Count + manual);
+        var week = TreasureCatalog.ShownWeek(now);
+        var weekTimes = week == null ? new List<DateTime>() : huntTimes.Where(t => t >= week.From && t < week.To).ToList();
+        var boosted = huntTimes.Count(t => TreasureCatalog.Boost(TreasureCatalog.GoldOutfit, t) > 1);
 
-        string Big(TreasureOdds odds, string items)
+        Chance Season(TreasureOdds odds) => manual >= 0
+            ? Chance.Of(odds, huntTimes, manual)
+            : Chance.Of(odds, Array.Empty<DateTime>(), seasonChests);
+        Chance Week(TreasureOdds odds) => Chance.Of(odds, weekTimes, 0);
+        Chance Shown(TreasureOdds odds) => odds.Weekly ? Week(odds) : Season(odds);
+        TreasureOdds Odds(string kind) => TreasureCatalog.Odds.First(o => o.Kind == kind);
+        TreasurePrize? PrizeOf(string kind) => week?.Prizes.FirstOrDefault(p => p.Kind == kind);
+
+        // Pace: chests per day this week (from its second day), else over the hunt. Used to project the chance at the
+        // end of the week (or of the hunt) if the player keeps going like this, with the normal odds.
+        static double PerDay(int count, DateTime from, DateTime to) => (to - from).TotalDays is var d && d >= 1 ? count / d : 0;
+        var seasonPace = huntTimes.Count > 0 ? PerDay(huntTimes.Count, huntTimes[0], now) : 0;
+        var weekPace = week != null ? PerDay(weekTimes.Count, week.From, now) : 0;
+        if (weekPace <= 0)
         {
-            var p = Chance(odds);
-            var half = TreasureCatalog.ChestsFor(odds.OneIn, 0.5);
-            var left = Math.Max(0, half - chests);
-            var width = Math.Clamp(p * 100, 0.6, 100).ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+            weekPace = seasonPace;
+        }
+        string Projection(TreasureOdds odds, Chance c, bool weekly)
+        {
+            var end = weekly ? week?.To ?? now : huntEnd;
+            var pace = weekly ? weekPace : seasonPace;
+            // Only while it is still in doubt: a projection of ">99.9%" says nothing.
+            if (pace <= 0 || now >= end || c.P >= 0.75)
+            {
+                return "";
+            }
+            var log = c.LogNever + pace * (end - now).TotalDays * double.LogP1(-1.0 / odds.OneIn);
+            var p = PercentHtml(new Chance(-double.ExpM1(log), log, 0, 0));
+            return weekly
+                ? L.T($"≈ {p} d'ici la fin de la semaine à ton rythme", $"≈ {p} by the end of the week at your pace", $"≈ {p} al final de la semana a tu ritmo")
+                : L.T($"≈ {p} d'ici la fin de la chasse à ton rythme", $"≈ {p} by the end of the hunt at your pace", $"≈ {p} al final de la búsqueda a tu ritmo");
+        }
+
+        // Gizmos: treasures that did not come from a golden chest (the others are counted by the collection).
+        var gizmoTimes = matches.SelectMany(m => m.TreasureFinds.Where(f => !f.FromGoldenChest).Select(f => Start(m).AddSeconds(f.ObtainedAtSeconds ?? 0)))
+            .Where(t => t >= huntStart).OrderBy(t => t).ToList();
+
+        string Tag(bool weekly) => weekly
+            ? $"<span class=\"tag weekly\">{L.T("Hebdo", "Weekly", "Semanal")}</span>"
+            : $"<span class=\"tag season\">{L.T("Saison", "Season", "Temporada")}</span>";
+        string Chip(double p)
+        {
+            var (cls, text) = Verdict(p);
+            return $"<span class=\"vchip {cls}\">{text}</span>";
+        }
+        string Bar(double p) => $"<span class=\"cbar\"><i class=\"{Verdict(p).Cls}\" style=\"width:{Math.Clamp(p * 100, 0.8, 100).ToString("F1", CultureInfo.InvariantCulture)}%\"></i></span>";
+        string Img(TreasurePrize? prize, string cls) => TreasureImages.Src(prize?.Image) is { } src ? $"<img class=\"{cls}\" src=\"{H(src)}\" alt=\"\" onerror=\"this.style.visibility='hidden'\">" : "";
+        string OneIn(int n) => L.T($"1 sur {n.ToString("N0", Fr)}", $"1 in {n.ToString("N0", Fr)}", $"1 entre {n.ToString("N0", Fr)}");
+        string N(int n) => n.ToString("N0", Fr);
+        string GotBadge() => $"<span class=\"gotbadge\">✓ {L.T("Obtenu", "Got it", "Conseguido")}</span>";
+
+        var info = L.T(
+            "La chance que chaque trésor soit déjà tombé pour toi au moins une fois. Détails : « Comment c'est calculé ? » en bas.",
+            "The chance each treasure has already dropped for you at least once. Details: \"How is this calculated?\" at the bottom.",
+            "La probabilidad de que cada tesoro ya te haya tocado al menos una vez. Detalles: «¿Cómo se calcula?» abajo.");
+        sb.Append(FoldStart("chances", L.T("Tes chances", "Your chances", "Tus probabilidades"), open: true, Info(info)));
+        sb.Append(TreasureHourBanner());
+        sb.Append($"<p class=\"ch-intro\">{L.T(
+            "Chaque coffre est un nouveau tirage : tes chances ne s'accumulent pas. Ces chiffres montrent la chance qu'un trésor soit <b>déjà tombé pour toi au moins une fois</b>, avec les coffres que tu as ouverts.",
+            "Every chest is a fresh roll: your odds don't build up. These numbers show the chance a treasure has <b>already dropped for you at least once</b>, from the chests you've opened.",
+            "Cada cofre es una tirada nueva: tus probabilidades no se acumulan. Estas cifras muestran la probabilidad de que un tesoro <b>ya te haya tocado al menos una vez</b>, con los cofres que has abierto.")}</p>");
+
+        // ---- The two rarest: the gold outfit of the week and Pirate Shop Access (all season).
+        string Card(string kind)
+        {
+            var odds = Odds(kind);
+            var weekly = odds.Weekly;
+            var c = Shown(odds);
+            var prize = weekly ? PrizeOf(kind) : TreasureCatalog.PirateShopAccess;
+            var items = prize?.Id ?? "";
+            var name = weekly ? prize?.Name ?? TreasureCatalog.KindName(kind) : L.T("Toute la saison", "Lasts all season", "Toda la temporada");
+            var about = c.P > 0 && c.P < 0.5 ? " · " + L.T($"environ 1 sur {N((int)Math.Round(1 / c.P))}", $"about 1 in {N((int)Math.Round(1 / c.P))}", $"aproximadamente 1 entre {N((int)Math.Round(1 / c.P))}") : "";
+            var scope = weekly
+                ? L.T("chance qu'il soit tombé pour toi cette semaine", "chance it dropped for you this week", "probabilidad de que te haya tocado esta semana")
+                : L.T("chance qu'il soit tombé pour toi cette saison", "chance it dropped for you this season", "probabilidad de que te haya tocado esta temporada");
+            var line = L.T($"Chaque coffre : {OneIn(odds.OneIn)} · {N(c.Chests)} coffres {(weekly ? "cette semaine" : "cette saison")}",
+                $"Each chest: {OneIn(odds.OneIn)} · {N(c.Chests)} chests {(weekly ? "this week" : "this season")}",
+                $"Cada cofre: {OneIn(odds.OneIn)} · {N(c.Chests)} cofres {(weekly ? "esta semana" : "esta temporada")}");
+            var extra = new StringBuilder();
+            if (weekly)
+            {
+                var s = Season(odds);
+                extra.Append($"<div class=\"cfoot\">{L.T($"Toutes les semaines réunies : <b>{PercentHtml(s)}</b> sur {N(s.Chests)} coffres", $"All weeks combined: <b>{PercentHtml(s)}</b> over {N(s.Chests)} chests", $"Todas las semanas juntas: <b>{PercentHtml(s)}</b> en {N(s.Chests)} cofres")}</div>");
+                if (week != null && now < week.To)
+                {
+                    extra.Append($"<div class=\"cfoot\">{L.T("Cette tenue part dans", "This outfit leaves in", "Este traje se va en")} <b>{Countdown(week.To)}</b></div>");
+                }
+            }
+            else
+            {
+                var half = TreasureCatalog.ChestsFor(odds.OneIn, 0.5);
+                var progress = Math.Clamp(c.Chests * 100.0 / half, 0.8, 100).ToString("F1", CultureInfo.InvariantCulture);
+                extra.Append($"<div class=\"halfway\"><div class=\"hrow\"><span>{L.T("Vers une chance sur deux", "Halfway to a 50/50 chance", "Hacia una probabilidad del 50 %")}</span><span><b>{N(c.Chests)}</b> / {N((int)Math.Min(int.MaxValue, half))} {L.T("coffres", "chests", "cofres")}</span></div><span class=\"cbar wide\"><i class=\"gold\" style=\"width:{progress}%\"></i></span></div>");
+            }
+            var projection = Projection(odds, c, weekly);
+            if (projection.Length > 0)
+            {
+                extra.Append($"<div class=\"cfoot\">{projection}</div>");
+            }
             return $"""
-                <div class="odds" data-items="{items}" data-kind="{odds.Kind}" data-p="{p.ToString("R", System.Globalization.CultureInfo.InvariantCulture)}"><div class="k"><span>{H(TreasureCatalog.KindName(odds.Kind))}<span class="boost" hidden></span></span><span class="gotbadge">✓ {L.T("obtenu", "obtained", "obtenido")}</span></div>
-                <div class="v num">{Percent(p)}</div>
-                <div class="l">{L.T($"de chances de l'avoir eu au moins une fois avec tes {chests.ToString("N0", Fr)} coffres", $"chance of having had it at least once with your {chests.ToString("N0", Fr)} chests", $"de probabilidad de haberlo conseguido al menos una vez con tus {chests.ToString("N0", Fr)} cofres")}</div>
-                <span class="meter wide"><i style="width:{width}%"></i></span>
-                <div class="s sline">{L.T($"1 sur {odds.OneIn.ToString("N0", Fr)} à chaque coffre · une chance sur deux vers {half.ToString("N0", Fr)} coffres", $"1 in {odds.OneIn.ToString("N0", Fr)} per chest · one chance in two at about {half.ToString("N0", Fr)} chests", $"1 entre {odds.OneIn.ToString("N0", Fr)} por cofre · una de cada dos hacia {half.ToString("N0", Fr)} cofres")}{(left > 0 ? L.T($" (encore {left.ToString("N0", Fr)})", $" ({left.ToString("N0", Fr)} to go)", $" (faltan {left.ToString("N0", Fr)})") : "")}</div></div>
+                <div class="hcard" data-items="{items}" data-kind="{kind}" data-p="{c.P.ToString("R", CultureInfo.InvariantCulture)}">
+                <div class="htop">{Img(prize, "cthumb")}<div class="hname"><div class="k">{H(TreasureCatalog.KindName(kind))}<span class="boost" hidden></span></div><div class="ciname">{H(name)}</div></div>{Tag(weekly)}{GotBadge()}</div>
+                <div class="hval"><span class="big num">{PercentHtml(c)}</span>{Chip(c.P)}</div>
+                <div class="hexp">{scope}{about}</div>
+                <div class="s sline">{line}</div>{extra}</div>
                 """;
         }
-        sb.Append(Big(TreasureCatalog.Odds.First(o => o.Kind == TreasureCatalog.GoldOutfit), outfits));
-        sb.Append(Big(TreasureCatalog.Odds.First(o => o.Kind == TreasureCatalog.PirateShop), TreasureCatalog.PirateShop));
+        sb.Append("<div class=\"chances2\">");
+        sb.Append(Card(TreasureCatalog.GoldOutfit));
+        sb.Append(Card(TreasureCatalog.PirateShop));
         sb.Append("</div>");
 
-        // The other kinds: chance of at least one, and how many of them on average with that many chests.
-        sb.Append($"<div class=\"card\" style=\"margin-top:12px\"><table><tr><th>{L.T("Trésor", "Treasure", "Tesoro")}</th><th style=\"text-align:right\">{L.T("Par coffre", "Per chest", "Por cofre")}</th><th style=\"text-align:right\">{L.T("Au moins un", "At least one", "Al menos uno")}</th><th style=\"text-align:right\">{L.T("En moyenne", "On average", "En promedio")}</th></tr>");
-        foreach (var odds in TreasureCatalog.Odds.Where(o => o.Kind is not (TreasureCatalog.GoldOutfit or TreasureCatalog.PirateShop)))
+        // ---- Tables: the weekly treasures (this week's items), then the season ones. Same columns, same widths.
+        var head = $"<tr><th>{L.T("Trésor", "Treasure", "Tesoro")}</th><th class=\"r\">{L.T("Chaque coffre", "Each chest", "Cada cofre")}</th><th>{L.T("Chance de l'avoir eu", "Chance you've had it", "Probabilidad de tenerlo")}</th><th class=\"r\">{L.T("Attendu", "Expected", "Esperado")}</th></tr>";
+        string Row(TreasureOdds odds, string note)
         {
-            var average = (double)chests / odds.OneIn;
-            sb.Append($"<tr data-kind=\"{odds.Kind}\"><td>{H(TreasureCatalog.KindName(odds.Kind))}<span class=\"boost\" hidden></span>{(odds.Weekly ? $" <span class=\"items\">· {L.T("change chaque semaine", "changes every week", "cambia cada semana")}</span>" : "")}</td><td class=\"n num pc\">1 / {odds.OneIn.ToString("N0", Fr)}</td><td class=\"n num\">{Percent(Chance(odds))}</td><td class=\"n num\">{average.ToString(average >= 10 ? "N0" : "N1", Fr)}</td></tr>");
+            var c = Shown(odds);
+            var prize = odds.Weekly ? PrizeOf(odds.Kind) : null;
+            var name = prize != null ? $"<span class=\"iname\">{H(prize.Name)}</span>" : "";
+            var projection = odds.Weekly ? Projection(odds, c, weekly: true) : "";
+            var below = string.Join("", new[] { note, projection }.Where(x => x.Length > 0).Select(x => $"<span class=\"iname\">{x}</span>"));
+            return $"<tr data-kind=\"{odds.Kind}\"{(prize != null ? $" data-items=\"{prize.Id}\"" : "")}><td><div class=\"tflex\">{Img(prize, "thumb")}<div><div class=\"tk\">{H(TreasureCatalog.KindName(odds.Kind))}<span class=\"boost\" hidden></span>{GotBadge()}</div>{name}<span class=\"iname mo\">{OneIn(odds.OneIn)} {L.T("par coffre", "each chest", "por cofre")}</span>{below}</div></div></td>"
+                + $"<td class=\"n pc\">{OneIn(odds.OneIn)}</td><td class=\"tchance\"><div class=\"tcv\">{Chip(c.P)}<b>{PercentHtml(c)}</b></div>{Bar(c.P)}</td><td class=\"n\">{Expected(c.Average)}</td></tr>";
         }
-        sb.Append($"</table></div>{FoldEnd}");
+
+        if (week != null)
+        {
+            var leaves = now < week.To
+                ? $" · {L.T("part", "leaves", "se va")} {TimeEl(week.To, "dayTime")}</div></div><div class=\"cdbox\"><span class=\"cdl\">{L.T("Part dans", "Leaves in", "Se va en")}</span>{Countdown(week.To)}</div></div>"
+                : "</div></div></div>";
+            sb.Append($"<div class=\"cgroup\"><div class=\"ghead\">{Tag(true)}<div><div class=\"gt\">{L.T("Semaine", "Week", "Semana")} {week.Number} · {H(week.Title)}</div><div class=\"gs\"><b>{L.Count(weekTimes.Count, "coffre", "coffres", "chest", "chests", "cofre", "cofres")}</b> {L.T("cette semaine", "this week", "esta semana")}{leaves}");
+            sb.Append($"<div class=\"card tcard\"><table class=\"ctable\">{head}");
+            foreach (var odds in TreasureCatalog.Odds.Where(o => o.Weekly && o.Kind != TreasureCatalog.GoldOutfit))
+            {
+                sb.Append(Row(odds, ""));
+            }
+            sb.Append("</table></div></div>");
+        }
+
+        var byHand = manual > 0 ? L.T($", dont {N(manual)} ajoutés à la main", $", including {N(manual)} added by hand", $", incluidos {N(manual)} añadidos a mano") : "";
+        sb.Append($"<div class=\"cgroup\"><div class=\"ghead\">{Tag(false)}<div><div class=\"gt\">{L.T("Toute la saison", "All season", "Toda la temporada")}</div><div class=\"gs\"><b>{L.Count(seasonChests, "coffre", "coffres", "chest", "chests", "cofre", "cofres")}</b> {L.T("depuis le début de la chasse", "since the hunt started", "desde el inicio de la búsqueda")} ({TimeEl(huntStart, "date")}){byHand}</div></div></div>");
+        sb.Append($"<div class=\"card tcard\"><table class=\"ctable\">{head}");
+        foreach (var odds in TreasureCatalog.Odds.Where(o => !o.Weekly && o.Kind != TreasureCatalog.PirateShop))
+        {
+            var note = "";
+            if (odds.Kind == TreasureCatalog.Gizmo && gizmoTimes.Count > 0)
+            {
+                var since = huntTimes.Count(t => t > gizmoTimes[^1]);
+                note = L.T($"Tu en as trouvé {N(gizmoTimes.Count)} · le dernier il y a {L.Count(since, "coffre", "coffres", "", "", "", "")}",
+                    $"You found {N(gizmoTimes.Count)} · last one {L.Count(since, "", "", "chest", "chests", "", "")} ago",
+                    $"Has encontrado {N(gizmoTimes.Count)} · el último hace {L.Count(since, "", "", "", "", "cofre", "cofres")}");
+            }
+            sb.Append(Row(odds, note));
+        }
+        sb.Append("</table></div></div>");
+
+        // ---- Folded: the weekly treasures over the whole season, and how it is computed.
+        sb.Append($"<details class=\"cmore\"><summary>{L.T("Trésors hebdo, toutes les semaines réunies", "Weekly treasures, all weeks combined", "Tesoros semanales, todas las semanas juntas")}</summary>");
+        sb.Append($"<p>{L.T($"La chance d'en avoir eu au moins un, de <i>n'importe quelle</i> semaine, sur les {N(seasonChests)} coffres de la chasse.", $"The chance you've had at least one of them from <i>any</i> week, over all {N(seasonChests)} chests of the hunt.", $"La probabilidad de haber conseguido al menos uno, de <i>cualquier</i> semana, en los {N(seasonChests)} cofres de la búsqueda.")}</p>");
+        sb.Append($"<div class=\"card tcard\"><table class=\"ctable mini\"><tr><th>{L.T("Trésor", "Treasure", "Tesoro")}</th><th class=\"r\">{L.T("Chance", "Chance", "Probabilidad")}</th><th class=\"r\">{L.T("Attendu", "Expected", "Esperado")}</th></tr>");
+        foreach (var odds in TreasureCatalog.Odds.Where(o => o.Weekly))
+        {
+            var s = Season(odds);
+            sb.Append($"<tr><td>{H(TreasureCatalog.KindName(odds.Kind))}</td><td class=\"n\">{PercentHtml(s)}</td><td class=\"n\">{Expected(s.Average)}</td></tr>");
+        }
+        sb.Append("</table></div></details>");
+
+        var hours = NextRegularHours(now);
+        var hoursText = hours.Count > 0
+            ? L.T($" Elles ont lieu chaque {string.Join(" et ", hours.Select(h => TimeEl(h, "weekdayTime")))}, pendant 2 heures.", $" They run every {string.Join(" and ", hours.Select(h => TimeEl(h, "weekdayTime")))}, for 2 hours.", $" Son cada {string.Join(" y ", hours.Select(h => TimeEl(h, "weekdayTime")))}, durante 2 horas.")
+            : "";
+        string Link(string url, string text) => $"<a href=\"{H(url)}\" target=\"_blank\" rel=\"noopener\">{H(text)}</a>";
+        sb.Append($"<details class=\"cmore\"><summary>{L.T("Comment c'est calculé ?", "How is this calculated?", "¿Cómo se calcula?")}</summary><ul>");
+        sb.Append(L.T(
+            $"<li><b>Chaque coffre est indépendant.</b> Un écran de chargement, c'est {OneIn(Odds(TreasureCatalog.LoadingScreen).OneIn)} à chaque coffre, peu importe combien tu en as ouvert.</li><li><b>Chance de l'avoir eu</b> = 1 − (1 − 1/X)<sup>coffres</sup>. Elle se rapproche de 100 % sans jamais l'atteindre.</li><li><b>Hebdo</b> : ces trésors changent chaque dimanche, et un coffre ne donne que celui de sa semaine : seuls les coffres de cette semaine comptent.</li><li><b>Saison</b> : l'accès à la boutique pirate et les gizmos comptent tous les coffres depuis le début de la chasse, y compris ceux ajoutés à la main. Ceux-là n'ont pas de date : ils ne comptent jamais pour une semaine.</li><li><b>Heures du trésor</b> : certaines chances sont multipliées (par exemple ×10 pour les véhicules).{hoursText} Les coffres ouverts pendant l'une d'elles comptent avec les chances augmentées ({N(boosted)} des tiens).</li><li><b>Attendu</b> : combien tu en aurais en moyenne avec ces coffres. <b>À ton rythme</b> : la même chance à la fin de la semaine (ou de la chasse) si tu continues à ouvrir autant de coffres par jour.</li><li>Cotes publiées par {Link(TreasureCatalog.OddsSource, "Epic Games (Fortnite Status)")}, horaires des heures du trésor d'après {Link(TreasureCatalog.HoursSource, "fortnite.bot")}.</li>",
+            $"<li><b>Each chest is independent.</b> A loading screen is {OneIn(Odds(TreasureCatalog.LoadingScreen).OneIn)} on every chest, no matter how many you've opened.</li><li><b>Chance you've had it</b> = 1 − (1 − 1/X)<sup>chests</sup>. It gets close to 100% but never reaches it.</li><li><b>Weekly</b> treasures change every Sunday, and a chest only gives that week's one, so only this week's chests count.</li><li><b>Season</b> treasures (Pirate Shop Access, gizmos) count every chest since the hunt started, including the ones you added by hand. Those have no date, so they never count toward a single week.</li><li><b>Treasure Hours</b> boost some odds (for example ×10 for vehicles).{hoursText} Chests opened during one count with the boosted odds ({N(boosted)} of yours).</li><li><b>Expected</b> is how many you'd get on average with these chests. <b>At your pace</b> is the same chance at the end of the week (or of the hunt) if you keep opening as many chests a day.</li><li>Odds published by {Link(TreasureCatalog.OddsSource, "Epic Games (Fortnite Status)")}, Treasure Hour times from {Link(TreasureCatalog.HoursSource, "fortnite.bot")}.</li>",
+            $"<li><b>Cada cofre es independiente.</b> Una pantalla de carga es {OneIn(Odds(TreasureCatalog.LoadingScreen).OneIn)} en cada cofre, sin importar cuántos hayas abierto.</li><li><b>Probabilidad de tenerlo</b> = 1 − (1 − 1/X)<sup>cofres</sup>. Se acerca al 100 % sin llegar nunca.</li><li><b>Semanal</b>: estos tesoros cambian cada domingo y un cofre solo da el de su semana, así que solo cuentan los cofres de esta semana.</li><li><b>Temporada</b>: el acceso a la tienda pirata y los artilugios cuentan todos los cofres desde el inicio de la búsqueda, incluidos los añadidos a mano. Esos no tienen fecha: nunca cuentan para una semana.</li><li><b>Horas del tesoro</b>: algunas probabilidades se multiplican (por ejemplo ×10 para los vehículos).{hoursText} Los cofres abiertos durante una de ellas cuentan con la probabilidad aumentada ({N(boosted)} de los tuyos).</li><li><b>Esperado</b>: cuántos tendrías de media con esos cofres. <b>A tu ritmo</b>: la misma probabilidad al final de la semana (o de la búsqueda) si sigues abriendo tantos cofres al día.</li><li>Probabilidades publicadas por {Link(TreasureCatalog.OddsSource, "Epic Games (Fortnite Status)")}, horarios de las horas del tesoro según {Link(TreasureCatalog.HoursSource, "fortnite.bot")}.</li>"));
+        sb.Append($"</ul></details>{FoldEnd}");
         return sb.ToString();
+    }
+
+    /// <summary>A word for a chance, and its color class.</summary>
+    private static (string Cls, string Text) Verdict(double p) => (p * 100) switch
+    {
+        >= 99.95 => ("certain", L.T("Presque sûr", "Almost certain", "Casi seguro")),
+        >= 95 => ("vlikely", L.T("Très probable", "Very likely", "Muy probable")),
+        >= 75 => ("likely", L.T("Probable", "Likely", "Probable")),
+        >= 25 => ("possible", L.T("Peut-être", "Maybe", "Quizás")),
+        >= 5 => ("unlikely", L.T("Peu probable", "Unlikely", "Poco probable")),
+        _ => ("vunlikely", L.T("Très peu probable", "Very unlikely", "Muy poco probable")),
+    };
+
+    /// <summary>How many on average ("≈ 4.3", "&lt; 0.1").</summary>
+    private static string Expected(double average) => average < 0.05
+        ? "&lt; " + 0.1.ToString("N1", Fr)
+        : "≈ " + average.ToString(average >= 10 ? "N0" : "N1", Fr);
+
+    /// <summary>A live countdown to a moment (drawn by the Treasure Hour script, every second).</summary>
+    private static string Countdown(DateTime utc) => $"<span class=\"cd\" data-end=\"{utc.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)}\"></span>";
+
+    /// <summary>
+    /// A moment in local time or UTC (Settings), with both in the tooltip. Formats: "dayTime" (Sunday, Nov 15, 6:00
+    /// AM), "weekdayTime" (Saturday 11:00 AM), "date" (November 1).
+    /// </summary>
+    private static string TimeEl(DateTime utc, string format)
+    {
+        var shown = L.Shown(utc);
+        var text = format switch
+        {
+            "date" => shown.ToString(L.T("d MMMM", "MMMM d", "d 'de' MMMM"), Fr),
+            "weekdayTime" => shown.ToString("dddd ", Fr) + L.Clock(shown),
+            _ => shown.ToString(L.T("dddd d MMM, ", "dddd, MMM d, ", "dddd d MMM, "), Fr) + L.Clock(shown),
+        };
+        var local = utc.ToLocalTime();
+        var tip = $"{local.ToString("D", Fr)}, {local.ToString(L.TimePattern(), Fr)} ({L.LocalOffset}) · {utc.ToString("D", Fr)}, {utc.ToString(L.TimePattern(), Fr)} UTC";
+        return $"<time datetime=\"{utc.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)}\" title=\"{H(tip)}\">{H(text)}</time>";
+    }
+
+    /// <summary>The next regular Treasure Hours (Saturday 19:00 and Sunday 02:00 UTC), for the explanation.</summary>
+    private static List<DateTime> NextRegularHours(DateTime now)
+    {
+        DateTime Next(DayOfWeek day, int hour)
+        {
+            var t = new DateTime(now.Year, now.Month, now.Day, hour, 0, 0, DateTimeKind.Utc).AddDays(((int)day - (int)now.DayOfWeek + 7) % 7);
+            return t.AddHours(2) > now ? t : t.AddDays(7);
+        }
+        return new[] { Next(DayOfWeek.Saturday, 19), Next(DayOfWeek.Sunday, 2) }.OrderBy(t => t).ToList();
+    }
+
+    /// <summary>A chance of "at least once" and what it is based on.</summary>
+    /// <param name="P">Chance of at least once (rounds to exactly 1 for the common kinds).</param>
+    /// <param name="LogNever">Natural log of the chance of never: still exact when <paramref name="P"/> is 1.</param>
+    /// <param name="Average">How many of them on average.</param>
+    /// <param name="Chests">Chests counted.</param>
+    private readonly record struct Chance(double P, double LogNever, double Average, int Chests)
+    {
+        public static Chance Of(TreasureOdds odds, IReadOnlyCollection<DateTime> times, long plain)
+        {
+            var log = TreasureCatalog.LogNever(odds, times, plain);
+            return new Chance(-double.ExpM1(log), log, TreasureCatalog.Expected(odds, times, plain), (int)(times.Count + Math.Max(0, plain)));
+        }
+    }
+
+    /// <summary>
+    /// A chance as text, never "100%": at least once over many chests is never certain. Close to it, the exact gap is
+    /// in the tooltip ("never had it: 1 chance in 5.2 × 10²⁷").
+    /// </summary>
+    private static string PercentHtml(Chance c)
+    {
+        var text = Percent(c.P);
+        if (c.P * 100 < 99.95)
+        {
+            return text;
+        }
+        var x = OneInHuge(c.LogNever);
+        var never = L.T($"ne pas l'avoir eu : 1 chance sur {x}", $"never had it: 1 chance in {x}", $"no haberlo conseguido: 1 entre {x}");
+        return $"<span title=\"{H(never)}\">{text}</span>";
+    }
+
+    /// <summary>"1 in X" from the log of a tiny chance: X written plainly up to a billion, then as a power of ten.</summary>
+    private static string OneInHuge(double logChance)
+    {
+        var log10 = -logChance / Math.Log(10);
+        if (log10 < 9)
+        {
+            return Math.Round(Math.Exp(-logChance)).ToString("N0", Fr);
+        }
+        var exp = (int)Math.Floor(log10);
+        var mantissa = Math.Pow(10, log10 - exp);
+        const string sup = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+        return $"{mantissa.ToString("F1", Fr)} × 10{string.Concat(exp.ToString(CultureInfo.InvariantCulture).Select(d => sup[d - '0']))}";
     }
 
     /// <summary>The collection of this season's treasures, to tick what was obtained (folded by default).</summary>
@@ -677,7 +1021,7 @@ public static class ReportWriter
             var saved = !auto && ticked.Contains(p.Id);
             var src = TreasureImages.Src(p.Image);
             var img = src != null ? $"""<img src="{H(src)}" alt="" loading="lazy" onerror="this.remove()">""" : "";
-            return $"""<label class="prize{(auto ? " got" : "")}"><input type="checkbox" data-prize="{p.Id}"{(auto ? " checked disabled" : saved ? " checked data-saved=\"1\"" : "")}><span class="pimg">{img}</span><span class="pn">{H(p.Name)}</span><span class="pk">{H(TreasureCatalog.KindName(p.Kind))}{(auto ? " · " + L.T("vu dans tes replays", "seen in your replays", "visto en tus repeticiones") : "")}</span></label>""";
+            return $"""<label class="prize{(auto ? " got" : "")}"><input type="checkbox" data-prize="{p.Id}"{(auto ? $" checked data-auto=\"1\" onclick=\"return false\" title=\"{H(L.T("Coché tout seul : vu dans tes replays", "Ticked by itself: seen in your replays", "Marcado solo: visto en tus repeticiones"))}\"" : saved ? " checked data-saved=\"1\"" : "")}><span class="pimg">{img}</span><span class="pn">{H(p.Name)}</span><span class="pk">{H(TreasureCatalog.KindName(p.Kind))}{(auto ? " · " + L.T("vu dans tes replays", "seen in your replays", "visto en tus repeticiones") : "")}</span></label>""";
         }
         var collectionInfo = L.T(
             "Coche ce que tu as déjà obtenu : c'est enregistré dans ce navigateur seulement. Un trésor sorti d'un coffre doré est coché tout seul quand le compteur le reconnaît. À part les gizmos, on ne peut pas obtenir deux fois le même trésor. Images : fortnite.bot, téléchargées une seule fois par le compteur et gardées dans son dossier de données.",
@@ -689,7 +1033,7 @@ public static class ReportWriter
         foreach (var week in TreasureCatalog.Weeks)
         {
             var current = now >= week.From && now < week.To;
-            var dates = $"{week.From.ToLocalTime().ToString(L.T("d MMM HH:mm", "MMM d HH:mm", "d MMM HH:mm"), Fr)} – {week.To.ToLocalTime().ToString(L.T("d MMM HH:mm", "MMM d HH:mm", "d MMM HH:mm"), Fr)}";
+            var dates = $"{ShortWhen(week.From)} – {ShortWhen(week.To)}";
             sb.Append($"<div class=\"wk{(current ? " now" : "")}\"><div class=\"wt\">{L.T("Semaine", "Week", "Semana")} {week.Number} · {H(week.Title)} <span class=\"items\">{dates}{(current ? " · " + L.T("cette semaine", "this week", "esta semana") : "")}</span></div>");
             sb.Append(week.Prizes.Count > 0
                 ? $"<div class=\"prizes\">{string.Concat(week.Prizes.Select(Prize))}</div></div>"
@@ -701,7 +1045,9 @@ public static class ReportWriter
 
     /// <summary>
     /// The Treasure Hour banner: drawn by the page script from the schedule, against the clock of the PC, so that it
-    /// switches by itself when an hour starts or ends ("live now, until 22:00" / "next one: Saturday 20:00").
+    /// switches by itself when an hour starts or ends ("live now, until 22:00 · ends in 37m" / "next one: Saturday
+    /// 20:00 · in 2d 4h", with a calendar file to download). Times follow the settings (local time or UTC, 12 or 24 h).
+    /// The same script draws every countdown of the page (<see cref="Countdown"/>) each second.
     /// </summary>
     private static string TreasureHourBanner()
     {
@@ -723,28 +1069,40 @@ public static class ReportWriter
         {
             live = L.T("Heure du trésor en cours, jusqu'à {0}", "Treasure Hour live now, until {0}", "Hora del tesoro en curso, hasta las {0}"),
             next = L.T("Prochaine heure du trésor : {0}", "Next Treasure Hour: {0}", "Próxima hora del tesoro: {0}"),
+            endsIn = L.T("se termine dans {0}", "ends in {0}", "termina en {0}"),
+            startsIn = L.T("dans {0}", "in {0}", "en {0}"),
+            calendar = L.T("Ajouter au calendrier", "Add to calendar", "Añadir al calendario"),
+            calendarTitle = L.T("Heure du trésor Fortnite", "Fortnite Treasure Hour", "Hora del tesoro de Fortnite"),
             expected = L.T("prévue, pas encore annoncée", "expected, not announced yet", "prevista, aún no anunciada"),
             perChest = L.T("1 sur {0} par coffre", "1 in {0} per chest", "1 entre {0} por cofre"),
+            oneIn = L.T("1 sur {0}", "1 in {0}", "1 entre {0}"),
             boostPerChest = L.T("1 sur {0} à chaque coffre pendant l'heure du trésor", "1 in {0} per chest during the Treasure Hour", "1 entre {0} por cofre durante la hora del tesoro"),
             boostHalf = L.T(" · une chance sur deux dans {0} coffres de plus à ce rythme", " · one chance in two within {0} more chests at this rate", " · una de cada dos en {0} cofres más a este ritmo"),
+            units = L.T("j h min s", "d h m s", "d h m s").Split(' '),
+            now = L.T("maintenant", "now", "ahora"),
             locale = L.Culture.Name,
         };
+        // Time settings: UTC or local time, 12- or 24-hour clock (the same as the times written by the counter).
+        var clock = new { utc = L.UtcTimes, h12 = !L.Clock24 };
         // The default encoder escapes < > & as <...: the JSON cannot close the <script> element it sits in.
-        var json = System.Text.Json.JsonSerializer.Serialize(new { hours, odds, names, text });
+        var json = System.Text.Json.JsonSerializer.Serialize(new { hours, odds, names, text, clock });
         return $$"""
             <div class="thour" id="thour" hidden></div>
             <script type="application/json" id="thdata">{{json}}</script>
             <script>(function(){
             var d=JSON.parse(document.getElementById('thdata').textContent),el=document.getElementById('thour');
             function f(n){return Math.round(n).toLocaleString(d.text.locale)}
-            function t(ms,withDay){var o=withDay?{weekday:'long',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}:{hour:'2-digit',minute:'2-digit'};return new Date(ms).toLocaleString(d.text.locale,o)}
+            function t(ms,withDay){var o=withDay?{weekday:'long',day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}:{hour:'numeric',minute:'2-digit'};o.hour12=d.clock.h12;if(d.clock.utc)o.timeZone='UTC';return new Date(ms).toLocaleString(d.text.locale,o)+(d.clock.utc?' UTC':'')}
+            function iso(ms){return new Date(ms).toISOString().slice(0,19)+'Z'}
+            function cd(ms){return '<span class="cd" data-end="'+iso(ms)+'"></span>'}
             function boosts(h,live){return Object.keys(h.b).map(function(k){return '<span><b>'+d.names[k]+' ×'+h.b[k].toLocaleString(d.text.locale)+'</b>'+(live?' · '+d.text.perChest.replace('{0}',f(d.odds[k]/h.b[k])):'')+'</span>'}).join('')}
+            function cal(h){return ' <a href="#" class="ics" data-s="'+h.s+'" data-e="'+h.e+'">'+d.text.calendar+'</a>'}
             function draw(){
               var now=Date.now(),cur=d.hours.filter(function(h){return now>=h.s&&now<h.e})[0],nxt=d.hours.filter(function(h){return h.s>now}).sort(function(a,b){return a.s-b.s})[0];
-              if(cur){el.className='thour live';el.innerHTML='<div class="tt">⚡ '+d.text.live.replace('{0}',t(cur.e,false))+'</div><div class="tb">'+boosts(cur,true)+'</div>';el.hidden=false}
-              else if(nxt){el.className='thour';el.innerHTML='<div class="tt">'+d.text.next.replace('{0}',t(nxt.s,true))+(nxt.c?'':' <span class="exp">('+d.text.expected+')</span>')+'</div><div class="tb">'+boosts(nxt,false)+'</div>';el.hidden=false}
+              if(cur){el.className='thour live';el.innerHTML='<div class="tt">⚡ '+d.text.live.replace('{0}',t(cur.e,false))+' · '+d.text.endsIn.replace('{0}',cd(cur.e))+'</div><div class="tb">'+boosts(cur,true)+'</div>';el.hidden=false}
+              else if(nxt){el.className='thour';el.innerHTML='<div class="tt">'+d.text.next.replace('{0}',t(nxt.s,true))+' · '+d.text.startsIn.replace('{0}',cd(nxt.s))+(nxt.c?'':' <span class="exp">('+d.text.expected+')</span>')+cal(nxt)+'</div><div class="tb">'+boosts(nxt,false)+'</div>';el.hidden=false}
               else el.hidden=true;
-              boost(cur);
+              boost(cur);tick();
             }
             // During a Treasure Hour, the odds of the boosted kinds (cards and table) show the boosted rate, in orange.
             function boost(cur){
@@ -759,10 +1117,33 @@ public static class ReportWriter
                     line.innerHTML='<span class="boostv">'+s+'</span>'}
                   else line.innerHTML=line.getAttribute('data-n');
                 }
-                if(pc){if(!pc.hasAttribute('data-n'))pc.setAttribute('data-n',pc.innerHTML);pc.innerHTML=b?'<span class="boostv">1 / '+f(d.odds[k]/b)+'</span>':pc.getAttribute('data-n')}
+                if(pc){if(!pc.hasAttribute('data-n'))pc.setAttribute('data-n',pc.innerHTML);pc.innerHTML=b?'<span class="boostv">'+d.text.oneIn.replace('{0}',f(d.odds[k]/b))+'</span>':pc.getAttribute('data-n')}
               });
             }
-            draw();document.addEventListener('DOMContentLoaded',draw);setInterval(draw,30000);
+            // Every countdown of the page: "3d 11h 58m", with seconds in the last hour, orange in the last day.
+            function tick(){
+              var now=Date.now(),u=d.text.units;
+              [].forEach.call(document.querySelectorAll('.cd'),function(x){
+                var ms=new Date(x.getAttribute('data-end'))-now;
+                if(ms<=0){x.textContent=d.text.now;x.classList.add('done');return}
+                var s=Math.floor(ms/1000),dd=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),sec=s%60;
+                x.textContent=dd>0?dd+u[0]+' '+h+u[1]+' '+m+u[2]:h>0?h+u[1]+' '+m+u[2]+' '+sec+u[3]:m+u[2]+' '+sec+u[3];
+                x.classList.toggle('soon',ms<86400000);
+              });
+            }
+            // "Add to calendar": a small .ics file for the next Treasure Hour (no account, works with any calendar app).
+            document.addEventListener('click',function(e){
+              var a=e.target.closest&&e.target.closest('a.ics');if(!a)return;e.preventDefault();
+              function z(ms){return iso(+ms).replace(/[-:]/g,'')}
+              var h=d.hours.filter(function(x){return String(x.s)===a.getAttribute('data-s')})[0];
+              var desc=h?Object.keys(h.b).map(function(k){return d.names[k]+' x'+h.b[k]}).join(', '):'';
+              var ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Chest Counter//Treasure Hour//EN','BEGIN:VEVENT','UID:treasure-hour-'+a.getAttribute('data-s')+'@chestcounter',
+                'DTSTAMP:'+z(Date.now()),'DTSTART:'+z(a.getAttribute('data-s')),'DTEND:'+z(a.getAttribute('data-e')),'SUMMARY:'+d.text.calendarTitle,'DESCRIPTION:'+desc,
+                'BEGIN:VALARM','TRIGGER:-PT10M','ACTION:DISPLAY','DESCRIPTION:'+d.text.calendarTitle,'END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n');
+              var link=document.createElement('a');link.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));link.download='treasure-hour.ics';
+              document.body.appendChild(link);link.click();setTimeout(function(){URL.revokeObjectURL(link.href);link.remove()},1000);
+            });
+            draw();document.addEventListener('DOMContentLoaded',draw);setInterval(draw,30000);setInterval(tick,1000);
             })();</script>
             """;
     }

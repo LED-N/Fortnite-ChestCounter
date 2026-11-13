@@ -140,8 +140,8 @@ public sealed class Tracker
                 var mb = (file.Length / 1024 / 1024.0).ToString("F1", L.Culture);
                 var justEnded = DateTime.UtcNow - file.LastWriteTimeUtc < TimeSpan.FromMinutes(2);
                 Console.WriteLine(justEnded
-                    ? L.T($"[{DateTime.Now:HH:mm:ss}] Partie terminée : analyse du replay ({mb} Mo)…", $"[{DateTime.Now:HH:mm:ss}] Match over: analyzing the replay ({mb} MB)…", $"[{DateTime.Now:HH:mm:ss}] Partida terminada: analizando la repetición ({mb} MB)…")
-                    : L.T($"[{DateTime.Now:HH:mm:ss}] Analyse de {file.Name} ({mb} Mo)…", $"[{DateTime.Now:HH:mm:ss}] Analyzing {file.Name} ({mb} MB)…", $"[{DateTime.Now:HH:mm:ss}] Analizando {file.Name} ({mb} MB)…"));
+                    ? L.T($"{L.Stamp} Partie terminée : analyse du replay ({mb} Mo)…", $"{L.Stamp} Match over: analyzing the replay ({mb} MB)…", $"{L.Stamp} Partida terminada: analizando la repetición ({mb} MB)…")
+                    : L.T($"{L.Stamp} Analyse de {file.Name} ({mb} Mo)…", $"{L.Stamp} Analyzing {file.Name} ({mb} MB)…", $"{L.Stamp} Analizando {file.Name} ({mb} MB)…"));
                 Console.ResetColor();
             }
 
@@ -503,8 +503,8 @@ public sealed class Tracker
             _liveNotCounted = map != null && !GameModes.IsSeasonMap(map);
             Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.WriteLine(_liveNotCounted
-                ? L.T($"[{DateTime.Now:HH:mm:ss}] Partie en cours dans un autre mode (carte {map}) : elle ne sera pas comptée.", $"[{DateTime.Now:HH:mm:ss}] Match in progress in another mode (map {map}): it will not be counted.", $"[{DateTime.Now:HH:mm:ss}] Partida en curso en otro modo (mapa {map}): no se contará.")
-                : L.T($"[{DateTime.Now:HH:mm:ss}] Partie en cours… (ses coffres seront comptés à la fin)", $"[{DateTime.Now:HH:mm:ss}] Match in progress… (its chests will be counted at the end)", $"[{DateTime.Now:HH:mm:ss}] Partida en curso… (sus cofres se contarán al final)"));
+                ? L.T($"{L.Stamp} Partie en cours dans un autre mode (carte {map}) : elle ne sera pas comptée.", $"{L.Stamp} Match in progress in another mode (map {map}): it will not be counted.", $"{L.Stamp} Partida en curso en otro modo (mapa {map}): no se contará.")
+                : L.T($"{L.Stamp} Partie en cours… (ses coffres seront comptés à la fin)", $"{L.Stamp} Match in progress… (its chests will be counted at the end)", $"{L.Stamp} Partida en curso… (sus cofres se contarán al final)"));
             Console.ResetColor();
             if (_liveNotCounted)
             {
@@ -552,7 +552,7 @@ public sealed class Tracker
         if (changed && LiveMatch != null)
         {
             Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {L.T("Partie en cours", "Match in progress", "Partida en curso")}: {L.Count(LiveMatch.ChestsOpened, "coffre", "chest", "cofre")}"
+            Console.WriteLine($"{L.Stamp} {L.T("Partie en cours", "Match in progress", "Partida en curso")}: {L.Count(LiveMatch.ChestsOpened, "coffre", "chest", "cofre")}"
                 + (LiveMatch.TreasureFinds.Count > 0 ? $", {L.Count(LiveMatch.TreasureFinds.Count, "trésor", "treasure", "tesoro")}" : ""));
             Console.ResetColor();
         }
@@ -583,7 +583,7 @@ public sealed class Tracker
     private void PrintMatch(MatchRecord m, bool updated)
     {
         var total = Math.Max(0, Profiles.Counted(_data).Where(x => Profiles.Key(x) == Profiles.Key(m)).Sum(x => x.ChestsOpened) + Profiles.Manual(_data, Profiles.Key(m)));
-        var when = (m.MatchStartUtc ?? m.AnalyzedAtUtc).ToLocalTime();
+        var when = L.Shown(m.MatchStartUtc ?? m.AnalyzedAtUtc);
 
         Console.ForegroundColor = ConsoleColor.Green;
         Console.Write($"   {(updated ? "↻" : "✔")} {L.T("Partie du", "Match of", "Partida del")} {L.DateTimeShort(when)}");
