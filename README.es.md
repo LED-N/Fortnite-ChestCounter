@@ -36,7 +36,7 @@ Fortnite puede grabar un **archivo de repetición** de cada partida en tu PC. Ch
 > [!IMPORTANT]
 > **Las repeticiones deben estar activadas en Fortnite**: *Ajustes → Juego → Repeticiones → Grabar repeticiones: **Activado***. Sin repeticiones, la herramienta no tiene nada que leer.
 
-Como Fortnite solo escribe la clave de descifrado de la repetición al terminar la partida, los cofres se cuentan **unos segundos después de cada partida**, no durante. Mientras juegas, el overlay muestra **● En partida**.
+Como Fortnite solo escribe la clave de descifrado de la repetición al terminar la partida, los cofres se cuentan **unos segundos después de cada partida**, no durante. Mientras juegas, un **punto rojo** junto al total del overlay indica que hay una partida en curso.
 
 ## Para empezar
 
@@ -60,7 +60,7 @@ Cinco pestañas: **Inicio**, **Informe**, **Overlay**, **Ajustes** y **Ayuda**. 
 - **Inicio**: tu total, tu sesión, tu última partida y tus tesoros, los botones del overlay y de las actualizaciones, y la actividad (cada partida contada, o por qué se ignoró una).
 - **Informe**: todas tus estadísticas (ver más abajo).
 - **Overlay**: el overlay en el juego y la página para OBS.
-- **Ajustes**: idioma, área de notificación, abrir con Fortnite, actualizaciones, carpeta de repeticiones.
+- **Ajustes**: idioma, horas (locales o UTC, reloj de 12 o 24 horas), área de notificación, abrir con Fortnite, actualizaciones, carpeta de repeticiones.
 - **Ayuda**: cómo funciona, tu carpeta de datos, el registro de errores, un enlace para informar de un problema, y **Desinstalar**.
 
 <p align="center"><img src="docs/home-es.png" alt="Pestaña Inicio" width="820"></p>
@@ -69,7 +69,7 @@ La cruz de la ventana pregunta antes de detener el contador (una partida jugada 
 
 ### Los cofres abiertos antes del contador
 
-Haz clic en el **lápiz** de *Cofres en total* (Inicio o Informe) para añadir los cofres que abriste antes de usar el contador. ¿No sabes cuántos? Indica el número de partidas que muestra Fortnite (*Carrera → Estadísticas*): el contador multiplica las partidas que no ha visto por tu media. Un número negativo quita cofres, 0 borra lo añadido.
+Haz clic en el **lápiz** de *Cofres en total* (Inicio o Informe) para añadir los cofres que abriste antes de usar el contador. Cada número que escribes se suma a lo que ya añadiste (un número negativo quita cofres), y la lista de abajo muestra cada añadido, con una **×** para anularlo. Marca **Abiertos esta semana** para cofres de la semana en curso: así cuentan también en las probabilidades de la semana. ¿No sabes cuántos? Indica el número de partidas que muestra Fortnite (*Carrera → Estadísticas*): el contador multiplica las partidas que no ha visto por tu media (una nueva estimación sustituye a la anterior).
 
 <p align="center"><img src="docs/edit-es.png" alt="Modificar el número de cofres" width="820"></p>
 
@@ -80,6 +80,8 @@ Haz clic en el **lápiz** de *Cofres en total* (Inicio o Informe) para añadir l
 | Ajuste | Qué hace |
 |---|---|
 | Idioma | Francés, inglés o español. |
+| Horas mostradas en | Hora local (por defecto) o UTC, para las semanas, las horas del tesoro y las partidas. |
+| Reloj | Como Windows (por defecto), 12 horas o 24 horas. |
 | Minimizar al área de notificación | Sí: minimizar la ventana la coloca junto al reloj, abajo a la derecha de la barra de tareas (icono del cofre, a veces detrás de la pequeña flecha ^). No (por defecto): se queda en la barra de tareas como una ventana normal. |
 | Abrir con Fortnite | Ver más abajo. |
 | Actualizaciones | Propuestas (por defecto), instaladas automáticamente o desactivadas. |
@@ -94,8 +96,8 @@ Con esta opción, un pequeño proceso invisible se inicia con Windows y comprueb
 
 Solo las cifras, contorneadas como las del juego, sin fondo: colócalo bajo el minimapa y se integra en el HUD.
 
-- **En grande**: tu **total** de cofres, con el cofre dorado.
-- **Última**: los cofres de tu última partida. Durante una partida: **● En partida** (sus cofres se cuentan al final).
+- **En grande**: tu **total** de cofres, con el cofre dorado. Durante una partida, aparece un **punto rojo** a su lado (sus cofres se cuentan al final).
+- **Última**: los cofres de tu última partida, que siguen visibles durante la siguiente.
 - **Sesión**: los cofres desde que se abrió el contador.
 - **★**: tus tesoros.
 
@@ -116,7 +118,7 @@ La pestaña **Informe** se actualiza sola después de cada partida: total, parti
 
 <p align="center"><img src="docs/report-es.png" alt="Pestaña Informe" width="820"></p>
 
-- **Tus probabilidades** (abierta): la probabilidad de haber conseguido al menos una vez el **traje de oro** o el **acceso a la tienda pirata** con todos tus cofres, y para cada otro tipo de tesoro. Las probabilidades son las publicadas por Epic Games. Durante una **hora del tesoro**, los cofres cuentan con su probabilidad aumentada, el banner muestra la actual o la próxima, y las probabilidades de los tesoros potenciados cambian en directo (en naranja).
+- **Tus probabilidades** (abierta): la probabilidad de que cada tesoro ya te haya tocado al menos una vez, con una palabra que la resume (*Poco probable*, *Probable*, *Casi seguro*…). Un cofre solo da el tesoro de su semana, así que los tesoros **semanales** (traje de oro, vehículo y adhesivo, pico o mochila, pista musical, pantalla de carga) cuentan los cofres de esta semana, con su imagen y una cuenta atrás hasta que se van; el **acceso a la tienda pirata** y los artilugios cuentan toda la búsqueda. Las probabilidades son las publicadas por Epic Games. Durante una **hora del tesoro**, los cofres cuentan con su probabilidad aumentada, el banner muestra la actual o la próxima con una cuenta atrás, y las probabilidades de los tesoros potenciados cambian en directo (en naranja).
 - **Lo consiguieron en tus partidas** (experimental): los accesos a la tienda pirata y trajes de oro que consiguieron otros jugadores cerca de ti.
 - **Tu colección**: los tesoros de la temporada, semana a semana, para marcar lo que conseguiste. Un tesoro de un cofre dorado visto en tus repeticiones se marca solo.
 - **Tesoros encontrados** y **Últimas partidas**: cada tesoro y cada partida, de 10 en 10.

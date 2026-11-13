@@ -526,7 +526,7 @@ public static class ReportWriter
         }
         sb.Append("</section></div>");
 
-        sb.Append(ChancesSection(grandTotal, matches));
+        sb.Append(ChancesSection(grandTotal, matches, data.ManualEntries));
         sb.Append(SeenSection(matches));
         sb.Append(CollectionSection(matches, data.ObtainedIds));
 
@@ -704,7 +704,7 @@ public static class ReportWriter
     /// Pirate Shop Access and gizmos count every chest of the hunt. The weekly ones over the whole season and the way
     /// it is computed are in two folded parts at the bottom.
     /// </summary>
-    private static string ChancesSection(int chests, IReadOnlyList<MatchRecord> matches)
+    private static string ChancesSection(int chests, IReadOnlyList<MatchRecord> matches, IReadOnlyList<ManualEntry> manualEntries)
     {
         var now = DateTime.UtcNow;
         if (now >= TreasureCatalog.Weeks[^1].To.AddDays(14))
@@ -720,18 +720,21 @@ public static class ReportWriter
         var huntStart = TreasureCatalog.HuntStart;
         var huntEnd = TreasureCatalog.Weeks[^1].To;
         var huntTimes = chestTimes.Where(t => t >= huntStart).OrderBy(t => t).ToList();
-        // Added by hand (the pencil): no date, so normal odds, and never in a single week. A negative adjustment removes
-        // chests from the season (its boosts are then unknown).
+        // Added by hand (the pencil): no date, so normal odds, and in a week only when the player ticked "Opened this
+        // week" (they are in the season too). A negative adjustment removes chests from the season (its boosts are then
+        // unknown).
         var manual = chests - chestTimes.Count;
         var seasonChests = Math.Max(0, huntTimes.Count + manual);
         var week = TreasureCatalog.ShownWeek(now);
         var weekTimes = week == null ? new List<DateTime>() : huntTimes.Where(t => t >= week.From && t < week.To).ToList();
+        var weekManual = week == null ? 0 : Math.Max(0, manualEntries.Where(e => e.WeekFromUtc == week.From).Sum(e => e.Chests));
+        var weekChests = weekTimes.Count + weekManual;
         var boosted = huntTimes.Count(t => TreasureCatalog.Boost(TreasureCatalog.GoldOutfit, t) > 1);
 
         Chance Season(TreasureOdds odds) => manual >= 0
             ? Chance.Of(odds, huntTimes, manual)
             : Chance.Of(odds, Array.Empty<DateTime>(), seasonChests);
-        Chance Week(TreasureOdds odds) => Chance.Of(odds, weekTimes, 0);
+        Chance Week(TreasureOdds odds) => Chance.Of(odds, weekTimes, weekManual);
         Chance Shown(TreasureOdds odds) => odds.Weekly ? Week(odds) : Season(odds);
         TreasureOdds Odds(string kind) => TreasureCatalog.Odds.First(o => o.Kind == kind);
         TreasurePrize? PrizeOf(string kind) => week?.Prizes.FirstOrDefault(p => p.Kind == kind);
@@ -740,7 +743,7 @@ public static class ReportWriter
         // end of the week (or of the hunt) if the player keeps going like this, with the normal odds.
         static double PerDay(int count, DateTime from, DateTime to) => (to - from).TotalDays is var d && d >= 1 ? count / d : 0;
         var seasonPace = huntTimes.Count > 0 ? PerDay(huntTimes.Count, huntTimes[0], now) : 0;
-        var weekPace = week != null ? PerDay(weekTimes.Count, week.From, now) : 0;
+        var weekPace = week != null ? PerDay(weekChests, week.From, now) : 0;
         if (weekPace <= 0)
         {
             weekPace = seasonPace;
@@ -858,7 +861,7 @@ public static class ReportWriter
             var leaves = now < week.To
                 ? $" · {L.T("part", "leaves", "se va")} {TimeEl(week.To, "dayTime")}</div></div><div class=\"cdbox\"><span class=\"cdl\">{L.T("Part dans", "Leaves in", "Se va en")}</span>{Countdown(week.To)}</div></div>"
                 : "</div></div></div>";
-            sb.Append($"<div class=\"cgroup\"><div class=\"ghead\">{Tag(true)}<div><div class=\"gt\">{L.T("Semaine", "Week", "Semana")} {week.Number} · {H(week.Title)}</div><div class=\"gs\"><b>{L.Count(weekTimes.Count, "coffre", "coffres", "chest", "chests", "cofre", "cofres")}</b> {L.T("cette semaine", "this week", "esta semana")}{leaves}");
+            sb.Append($"<div class=\"cgroup\"><div class=\"ghead\">{Tag(true)}<div><div class=\"gt\">{L.T("Semaine", "Week", "Semana")} {week.Number} · {H(week.Title)}</div><div class=\"gs\"><b>{L.Count(weekChests, "coffre", "coffres", "chest", "chests", "cofre", "cofres")}</b> {L.T("cette semaine", "this week", "esta semana")}{(weekManual > 0 ? L.T($", dont {N(weekManual)} ajoutés à la main", $", including {N(weekManual)} added by hand", $", incluidos {N(weekManual)} añadidos a mano") : "")}{leaves}");
             sb.Append($"<div class=\"card tcard\"><table class=\"ctable\">{head}");
             foreach (var odds in TreasureCatalog.Odds.Where(o => o.Weekly && o.Kind != TreasureCatalog.GoldOutfit))
             {
@@ -902,9 +905,9 @@ public static class ReportWriter
         string Link(string url, string text) => $"<a href=\"{H(url)}\" target=\"_blank\" rel=\"noopener\">{H(text)}</a>";
         sb.Append($"<details class=\"cmore\"><summary>{L.T("Comment c'est calculé ?", "How is this calculated?", "¿Cómo se calcula?")}</summary><ul>");
         sb.Append(L.T(
-            $"<li><b>Chaque coffre est indépendant.</b> Un écran de chargement, c'est {OneIn(Odds(TreasureCatalog.LoadingScreen).OneIn)} à chaque coffre, peu importe combien tu en as ouvert.</li><li><b>Chance de l'avoir eu</b> = 1 − (1 − 1/X)<sup>coffres</sup>. Elle se rapproche de 100 % sans jamais l'atteindre.</li><li><b>Hebdo</b> : ces trésors changent chaque dimanche, et un coffre ne donne que celui de sa semaine : seuls les coffres de cette semaine comptent.</li><li><b>Saison</b> : l'accès à la boutique pirate et les gizmos comptent tous les coffres depuis le début de la chasse, y compris ceux ajoutés à la main. Ceux-là n'ont pas de date : ils ne comptent jamais pour une semaine.</li><li><b>Heures du trésor</b> : certaines chances sont multipliées (par exemple ×10 pour les véhicules).{hoursText} Les coffres ouverts pendant l'une d'elles comptent avec les chances augmentées ({N(boosted)} des tiens).</li><li><b>Attendu</b> : combien tu en aurais en moyenne avec ces coffres. <b>À ton rythme</b> : la même chance à la fin de la semaine (ou de la chasse) si tu continues à ouvrir autant de coffres par jour.</li><li>Cotes publiées par {Link(TreasureCatalog.OddsSource, "Epic Games (Fortnite Status)")}, horaires des heures du trésor d'après {Link(TreasureCatalog.HoursSource, "fortnite.bot")}.</li>",
-            $"<li><b>Each chest is independent.</b> A loading screen is {OneIn(Odds(TreasureCatalog.LoadingScreen).OneIn)} on every chest, no matter how many you've opened.</li><li><b>Chance you've had it</b> = 1 − (1 − 1/X)<sup>chests</sup>. It gets close to 100% but never reaches it.</li><li><b>Weekly</b> treasures change every Sunday, and a chest only gives that week's one, so only this week's chests count.</li><li><b>Season</b> treasures (Pirate Shop Access, gizmos) count every chest since the hunt started, including the ones you added by hand. Those have no date, so they never count toward a single week.</li><li><b>Treasure Hours</b> boost some odds (for example ×10 for vehicles).{hoursText} Chests opened during one count with the boosted odds ({N(boosted)} of yours).</li><li><b>Expected</b> is how many you'd get on average with these chests. <b>At your pace</b> is the same chance at the end of the week (or of the hunt) if you keep opening as many chests a day.</li><li>Odds published by {Link(TreasureCatalog.OddsSource, "Epic Games (Fortnite Status)")}, Treasure Hour times from {Link(TreasureCatalog.HoursSource, "fortnite.bot")}.</li>",
-            $"<li><b>Cada cofre es independiente.</b> Una pantalla de carga es {OneIn(Odds(TreasureCatalog.LoadingScreen).OneIn)} en cada cofre, sin importar cuántos hayas abierto.</li><li><b>Probabilidad de tenerlo</b> = 1 − (1 − 1/X)<sup>cofres</sup>. Se acerca al 100 % sin llegar nunca.</li><li><b>Semanal</b>: estos tesoros cambian cada domingo y un cofre solo da el de su semana, así que solo cuentan los cofres de esta semana.</li><li><b>Temporada</b>: el acceso a la tienda pirata y los artilugios cuentan todos los cofres desde el inicio de la búsqueda, incluidos los añadidos a mano. Esos no tienen fecha: nunca cuentan para una semana.</li><li><b>Horas del tesoro</b>: algunas probabilidades se multiplican (por ejemplo ×10 para los vehículos).{hoursText} Los cofres abiertos durante una de ellas cuentan con la probabilidad aumentada ({N(boosted)} de los tuyos).</li><li><b>Esperado</b>: cuántos tendrías de media con esos cofres. <b>A tu ritmo</b>: la misma probabilidad al final de la semana (o de la búsqueda) si sigues abriendo tantos cofres al día.</li><li>Probabilidades publicadas por {Link(TreasureCatalog.OddsSource, "Epic Games (Fortnite Status)")}, horarios de las horas del tesoro según {Link(TreasureCatalog.HoursSource, "fortnite.bot")}.</li>"));
+            $"<li><b>Chaque coffre est indépendant.</b> Un écran de chargement, c'est {OneIn(Odds(TreasureCatalog.LoadingScreen).OneIn)} à chaque coffre, peu importe combien tu en as ouvert.</li><li><b>Chance de l'avoir eu</b> = 1 − (1 − 1/X)<sup>coffres</sup>. Elle se rapproche de 100 % sans jamais l'atteindre.</li><li><b>Hebdo</b> : ces trésors changent chaque dimanche, et un coffre ne donne que celui de sa semaine : seuls les coffres de cette semaine comptent.</li><li><b>Saison</b> : l'accès à la boutique pirate et les gizmos comptent tous les coffres depuis le début de la chasse, y compris ceux ajoutés à la main. Ceux-là n'ont pas de date : ils ne comptent pour une semaine que si tu as coché « Ouverts cette semaine ».</li><li><b>Heures du trésor</b> : certaines chances sont multipliées (par exemple ×10 pour les véhicules).{hoursText} Les coffres ouverts pendant l'une d'elles comptent avec les chances augmentées ({N(boosted)} des tiens).</li><li><b>Attendu</b> : combien tu en aurais en moyenne avec ces coffres. <b>À ton rythme</b> : la même chance à la fin de la semaine (ou de la chasse) si tu continues à ouvrir autant de coffres par jour.</li><li>Cotes publiées par {Link(TreasureCatalog.OddsSource, "Epic Games (Fortnite Status)")}, horaires des heures du trésor d'après {Link(TreasureCatalog.HoursSource, "fortnite.bot")}.</li>",
+            $"<li><b>Each chest is independent.</b> A loading screen is {OneIn(Odds(TreasureCatalog.LoadingScreen).OneIn)} on every chest, no matter how many you've opened.</li><li><b>Chance you've had it</b> = 1 − (1 − 1/X)<sup>chests</sup>. It gets close to 100% but never reaches it.</li><li><b>Weekly</b> treasures change every Sunday, and a chest only gives that week's one, so only this week's chests count.</li><li><b>Season</b> treasures (Pirate Shop Access, gizmos) count every chest since the hunt started, including the ones you added by hand. Those have no date, so they count toward a week only if you ticked \"Opened this week\".</li><li><b>Treasure Hours</b> boost some odds (for example ×10 for vehicles).{hoursText} Chests opened during one count with the boosted odds ({N(boosted)} of yours).</li><li><b>Expected</b> is how many you'd get on average with these chests. <b>At your pace</b> is the same chance at the end of the week (or of the hunt) if you keep opening as many chests a day.</li><li>Odds published by {Link(TreasureCatalog.OddsSource, "Epic Games (Fortnite Status)")}, Treasure Hour times from {Link(TreasureCatalog.HoursSource, "fortnite.bot")}.</li>",
+            $"<li><b>Cada cofre es independiente.</b> Una pantalla de carga es {OneIn(Odds(TreasureCatalog.LoadingScreen).OneIn)} en cada cofre, sin importar cuántos hayas abierto.</li><li><b>Probabilidad de tenerlo</b> = 1 − (1 − 1/X)<sup>cofres</sup>. Se acerca al 100 % sin llegar nunca.</li><li><b>Semanal</b>: estos tesoros cambian cada domingo y un cofre solo da el de su semana, así que solo cuentan los cofres de esta semana.</li><li><b>Temporada</b>: el acceso a la tienda pirata y los artilugios cuentan todos los cofres desde el inicio de la búsqueda, incluidos los añadidos a mano. Esos no tienen fecha: solo cuentan para una semana si marcaste «Abiertos esta semana».</li><li><b>Horas del tesoro</b>: algunas probabilidades se multiplican (por ejemplo ×10 para los vehículos).{hoursText} Los cofres abiertos durante una de ellas cuentan con la probabilidad aumentada ({N(boosted)} de los tuyos).</li><li><b>Esperado</b>: cuántos tendrías de media con esos cofres. <b>A tu ritmo</b>: la misma probabilidad al final de la semana (o de la búsqueda) si sigues abriendo tantos cofres al día.</li><li>Probabilidades publicadas por {Link(TreasureCatalog.OddsSource, "Epic Games (Fortnite Status)")}, horarios de las horas del tesoro según {Link(TreasureCatalog.HoursSource, "fortnite.bot")}.</li>"));
         sb.Append($"</ul></details>{FoldEnd}");
         return sb.ToString();
     }
@@ -1240,22 +1243,11 @@ public static class ReportWriter
     /// </summary>
     private static string OverlayHud(OverlayView v)
     {
-        string state;
-        if (v.CurrentLive && v.Current is { } cur && cur != "…")
-        {
-            state = Row(L.T("En direct", "Live", "En directo"), cur, "gold", dot: true);
-        }
-        else if (v.CurrentLive)
-        {
-            state = Row(L.T("En partie", "In a match", "En partida"), "", "", dot: true);
-        }
-        else
-        {
-            state = Row(L.T("Dernière", "Last", "Última"), v.Last ?? "—", "");
-        }
+        // The last finished match stays during the next one; the red dot next to the total says a match is in progress.
+        var state = Row(L.T("Dernière", "Last", "Última"), v.Last ?? "—", "");
         var squad = v.Squad != null ? Row(OverlayModel.SquadLabel, v.Squad, "") : "";
-        static string Row(string label, string value, string cls, bool dot = false) =>
-            $"<div class=\"r {cls}\">{(dot ? "<i class=\"dot\"></i>" : "")}<span>{H(label)}</span>{(value.Length > 0 ? $"<span class=\"sep\">•</span><b>{H(value)}</b>" : "")}</div>";
+        static string Row(string label, string value, string cls) =>
+            $"<div class=\"r {cls}\"><span>{H(label)}</span>{(value.Length > 0 ? $"<span class=\"sep\">•</span><b>{H(value)}</b>" : "")}</div>";
         return $$"""
             <!doctype html><html lang="{{L.Code}}"><head><meta charset="utf-8"><meta http-equiv="refresh" content="5">
             <title>{{L.T("Overlay coffres", "Chest overlay", "Overlay de cofres")}}</title>
@@ -1269,10 +1261,10 @@ public static class ReportWriter
             .r{display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:21px;font-stretch:semi-condensed;line-height:1.3}
             .r.gold b{color:#ffd23f}
             .sep{opacity:.9}
-            .dot{width:10px;height:10px;border-radius:50%;background:#ff3b30;box-shadow:0 0 0 2px #0b0f18}
+            .dot{width:13px;height:13px;border-radius:50%;background:#ff3b30;box-shadow:0 0 0 2px #0b0f18;flex:none}
             .t{color:#d6beff}.t .star{color:#c49bff}
             </style></head><body>
-            <div class="total{{(v.CurrentLive && v.Current is { } c && c != "…" ? " live" : "")}}"><svg viewBox="0 0 30 26" aria-hidden="true"><rect x="2" y="10" width="26" height="14" rx="2" fill="#ffd23f" stroke="#0b0f18" stroke-width="2.5"/><path d="M2 12 Q15 -2 28 12" fill="#e0a526" stroke="#0b0f18" stroke-width="2.5"/><rect x="12.5" y="12" width="5" height="6" rx="1" fill="#0b0f18"/></svg>{{H(v.Total)}}</div>
+            <div class="total{{(v.CurrentLive && v.Current is { } c && c != "…" ? " live" : "")}}">{{(v.CurrentLive ? "<i class=\"dot\"></i>" : "")}}<svg viewBox="0 0 30 26" aria-hidden="true"><rect x="2" y="10" width="26" height="14" rx="2" fill="#ffd23f" stroke="#0b0f18" stroke-width="2.5"/><path d="M2 12 Q15 -2 28 12" fill="#e0a526" stroke="#0b0f18" stroke-width="2.5"/><rect x="12.5" y="12" width="5" height="6" rx="1" fill="#0b0f18"/></svg>{{H(v.Total)}}</div>
             {{state}}
             {{Row(L.T("Session", "Session", "Sesión"), v.Session, "")}}
             {{squad}}

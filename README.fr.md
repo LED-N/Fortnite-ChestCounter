@@ -36,7 +36,7 @@ Fortnite peut enregistrer un **fichier replay** de chaque partie sur ton PC. Le 
 > [!IMPORTANT]
 > **Les rediffusions doivent être activées dans Fortnite** : *Paramètres → Jeu → Rediffusions → Enregistrer les rediffusions : **Activé***. Sans replays, l'outil n'a rien à lire.
 
-Comme Fortnite n'écrit la clé de déchiffrement du replay qu'à la fin de la partie, les coffres sont comptés **quelques secondes après chaque partie**, pas pendant. Pendant que tu joues, l'overlay affiche **● En partie**.
+Comme Fortnite n'écrit la clé de déchiffrement du replay qu'à la fin de la partie, les coffres sont comptés **quelques secondes après chaque partie**, pas pendant. Pendant que tu joues, un **point rouge** à côté du total de l'overlay indique qu'une partie est en cours.
 
 ## Démarrer
 
@@ -60,7 +60,7 @@ Cinq onglets : **Accueil**, **Rapport**, **Overlay**, **Réglages** et **Aide**.
 - **Accueil** : ton total, ta session, ta dernière partie et tes trésors, les boutons de l'overlay et des mises à jour, et l'activité (chaque partie comptée, ou pourquoi une partie a été ignorée).
 - **Rapport** : toutes tes statistiques (voir plus bas).
 - **Overlay** : l'overlay en jeu et la page pour OBS.
-- **Réglages** : langue, zone de notification, ouverture avec Fortnite, mises à jour, dossier des replays.
+- **Réglages** : langue, heures (locales ou UTC, sur 12 ou 24 heures), zone de notification, ouverture avec Fortnite, mises à jour, dossier des replays.
 - **Aide** : le fonctionnement, ton dossier de données, le journal d'erreurs, un lien pour signaler un problème, et **Désinstaller**.
 
 <p align="center"><img src="docs/home-fr.png" alt="Onglet Accueil" width="820"></p>
@@ -69,7 +69,7 @@ La croix de la fenêtre demande avant d'arrêter le compteur (une partie jouée 
 
 ### Les coffres ouverts avant le compteur
 
-Clique sur le **crayon** de *Coffres au total* (Accueil ou Rapport) pour ajouter les coffres que tu as ouverts avant d'utiliser le compteur. Tu ne sais pas combien ? Indique le nombre de parties affiché dans Fortnite (*Carrière → Statistiques*) : le compteur multiplie les parties qu'il n'a pas vues par ta moyenne. Un nombre négatif retire des coffres, 0 enlève l'ajout.
+Clique sur le **crayon** de *Coffres au total* (Accueil ou Rapport) pour ajouter les coffres que tu as ouverts avant d'utiliser le compteur. Chaque nombre tapé s'ajoute à ce que tu as déjà ajouté (un nombre négatif en retire), et la liste en dessous montre chaque ajout, avec une **×** pour l'annuler. Coche **Ouverts cette semaine** pour des coffres de la semaine en cours : ils comptent alors aussi dans les chances de la semaine. Tu ne sais pas combien ? Indique le nombre de parties affiché dans Fortnite (*Carrière → Statistiques*) : le compteur multiplie les parties qu'il n'a pas vues par ta moyenne (une nouvelle estimation remplace la précédente).
 
 <p align="center"><img src="docs/edit-fr.png" alt="Modifier le nombre de coffres" width="820"></p>
 
@@ -80,6 +80,8 @@ Clique sur le **crayon** de *Coffres au total* (Accueil ou Rapport) pour ajouter
 | Réglage | Effet |
 |---|---|
 | Langue | Français, anglais ou espagnol. |
+| Heures affichées | Heure locale (par défaut) ou UTC, pour les semaines, les heures du trésor et les parties. |
+| Horloge | Comme Windows (par défaut), 12 heures ou 24 heures. |
 | Réduire dans la zone de notification | Oui : réduire la fenêtre la range à côté de l'horloge, en bas à droite de la barre des tâches (icône du coffre, parfois derrière la petite flèche ^). Non (par défaut) : elle reste dans la barre des tâches comme une fenêtre normale. |
 | Ouvrir avec Fortnite | Voir plus bas. |
 | Mises à jour | Proposées (par défaut), installées automatiquement ou désactivées. |
@@ -94,8 +96,8 @@ Avec cette option, un tout petit processus invisible démarre avec Windows et re
 
 Juste les chiffres, contourés comme ceux du jeu, sans fond : place-le sous la minicarte et il se fond dans le HUD.
 
-- **En grand** : ton **total** de coffres, avec le coffre doré.
-- **Dernière** : les coffres de ta dernière partie. Pendant une partie : **● En partie** (ses coffres sont comptés à la fin).
+- **En grand** : ton **total** de coffres, avec le coffre doré. Pendant une partie, un **point rouge** s'affiche à côté (ses coffres sont comptés à la fin).
+- **Dernière** : les coffres de ta dernière partie, toujours affichés pendant la suivante.
 - **Session** : les coffres depuis le lancement du compteur.
 - **★** : tes trésors.
 
@@ -116,7 +118,7 @@ L'onglet **Rapport** se met à jour tout seul après chaque partie : total, part
 
 <p align="center"><img src="docs/report-fr.png" alt="Onglet Rapport" width="820"></p>
 
-- **Tes chances** (ouverte) : la probabilité d'avoir obtenu au moins une fois la **tenue en or** ou l'**accès à la boutique pirate** avec tous tes coffres, et pour chaque autre type de trésor. Les cotes sont celles publiées par Epic Games. Pendant une **heure du trésor**, les coffres comptent avec leurs chances augmentées, le bandeau affiche celle en cours ou la prochaine, et les cotes des trésors boostés changent en direct (en orange).
+- **Tes chances** (ouverte) : la probabilité que chaque trésor soit déjà tombé pour toi au moins une fois, avec un mot pour la dire (*Peu probable*, *Probable*, *Presque sûr*…). Un coffre ne donne que le trésor de sa semaine : les trésors **hebdo** (tenue en or, véhicule et autocollant, pioche ou sac à dos, piste musicale, écran de chargement) comptent donc les coffres de la semaine, avec leur image et un compte à rebours jusqu'à leur départ ; l'**accès à la boutique pirate** et les gizmos comptent toute la chasse. Les cotes sont celles publiées par Epic Games. Pendant une **heure du trésor**, les coffres comptent avec leurs chances augmentées, le bandeau affiche celle en cours ou la prochaine avec un compte à rebours, et les cotes des trésors boostés changent en direct (en orange).
 - **Ils l'ont eu dans tes parties** (expérimental) : les accès à la boutique pirate et tenues en or obtenus par d'autres joueurs près de toi.
 - **Ta collection** : les trésors de la saison, semaine par semaine, à cocher. Un trésor sorti d'un coffre doré vu dans tes replays est coché tout seul.
 - **Trésors trouvés** et **Dernières parties** : chaque trésor et chaque partie, 10 par 10.

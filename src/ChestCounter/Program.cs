@@ -898,6 +898,24 @@ object BuildGuiState()
         status = new { kind, text },
         total = L.N(view.TotalChests),
         manual = view.ManualAdjust,
+        manualText = (view.ManualAdjust > 0 ? "+" : "") + L.N(view.ManualAdjust),
+        // "Opened this week" is offered while a treasure week is running (its number).
+        manualWeek = TreasureCatalog.WeekOf(DateTime.UtcNow)?.Number,
+        // The pencil's history (issue #27): newest first, the "earlier" entry last.
+        manualHistory = Profiles.ManualHistory(data, config).Select(e => new
+        {
+            id = e.Id,
+            chests = (e.Chests > 0 ? "+" : "") + L.N(e.Chests),
+            what = e.Kind switch
+            {
+                ManualEntry.Estimate => L.T($"estimation · {L.N(e.CareerMatches ?? 0)} parties", $"estimate · {L.N(e.CareerMatches ?? 0)} matches", $"estimación · {L.N(e.CareerMatches ?? 0)} partidas"),
+                ManualEntry.Earlier => L.T("ajouts précédents", "earlier additions", "añadidos anteriores"),
+                _ => TreasureCatalog.Weeks.FirstOrDefault(w => w.From == e.WeekFromUtc) is { } wk
+                    ? L.T($"semaine {wk.Number}", $"week {wk.Number}", $"semana {wk.Number}")
+                    : "",
+            },
+            when = e.AddedUtc is { } added ? L.DateTimeShort(L.Shown(added)) : "",
+        }).ToList(),
         session = L.N(session.Sum(m => m.ChestsOpened)),
         sessionMatches = L.N(session.Count),
         last = last == null ? null : new { chests = L.N(last.ChestsOpened), when = L.DateTimeShort(L.Shown(last.MatchStartUtc ?? last.AnalyzedAtUtc)), mode = Pretty.Playlist(last.Playlist) },
@@ -1041,6 +1059,42 @@ object? RunGuiAction(string name, System.Text.Json.JsonElement value)
             store.SaveData(data);
             break;
         }
+        case "manualAdd":
+        case "manualEstimate":
+        {
+            // Added to what was already added. The total never goes below 0 chests nor above 10 million.
+            var view = Profiles.View(data, config);
+            int chests, career = 0;
+            var thisWeek = false;
+            var isObject = value.ValueKind == System.Text.Json.JsonValueKind.Object;
+            if (isObject)
+            {
+                chests = value.TryGetProperty("chests", out var c) && c.TryGetInt32(out var ci) ? ci : 0;
+                career = value.TryGetProperty("career", out var k) && k.TryGetInt32(out var ki) ? ki : 0;
+                thisWeek = value.TryGetProperty("thisWeek", out var tw) && tw.ValueKind == System.Text.Json.JsonValueKind.True;
+            }
+            else
+            {
+                chests = Int();
+            }
+            // An estimate replaces the previous one: its chests are not in the room left.
+            var previousEstimate = name == "manualEstimate" ? Profiles.ManualHistory(data, config).Where(e => e.Kind == ManualEntry.Estimate).Sum(e => e.Chests) : 0;
+            var current = view.ManualAdjust - previousEstimate;
+            chests = Math.Clamp(chests, -view.CountedChests - current, 10_000_000 - current);
+            if (chests != 0 || previousEstimate != 0)
+            {
+                var week = thisWeek && name == "manualAdd" ? TreasureCatalog.WeekOf(DateTime.UtcNow)?.From : null;
+                Profiles.AddManual(data, config, chests, name == "manualEstimate" ? career : null, week);
+                store.SaveData(data);
+            }
+            break;
+        }
+        case "manualRemove":
+            if (Profiles.RemoveManual(data, config, Str()))
+            {
+                store.SaveData(data);
+            }
+            break;
         case "estimate":
         {
             var view = Profiles.View(data, config);
@@ -1055,10 +1109,11 @@ object? RunGuiAction(string name, System.Text.Json.JsonElement value)
                 result = new
                 {
                     chests = e.Chests,
+                    career = e.CareerMatches,
                     chestsText = L.N(e.Chests),
-                    text = L.T($"({L.N(e.CareerMatches)} − {L.N(e.CountedMatches)} déjà comptées) × {avg} coffres en moyenne = {L.N(e.Chests)} coffres (remplace l'ajout précédent)",
-                        $"({L.N(e.CareerMatches)} − {L.N(e.CountedMatches)} already counted) × {avg} chests on average = {L.N(e.Chests)} chests (replaces the previous addition)",
-                        $"({L.N(e.CareerMatches)} − {L.N(e.CountedMatches)} ya contadas) × {avg} cofres de media = {L.N(e.Chests)} cofres (sustituye lo añadido antes)"),
+                    text = L.T($"({L.N(e.CareerMatches)} − {L.N(e.CountedMatches)} déjà comptées) × {avg} coffres en moyenne = {L.N(e.Chests)} coffres (remplace l'estimation précédente)",
+                        $"({L.N(e.CareerMatches)} − {L.N(e.CountedMatches)} already counted) × {avg} chests on average = {L.N(e.Chests)} chests (replaces the previous estimate)",
+                        $"({L.N(e.CareerMatches)} − {L.N(e.CountedMatches)} ya contadas) × {avg} cofres de media = {L.N(e.Chests)} cofres (sustituye la estimación anterior)"),
                 };
             }
             else
