@@ -207,7 +207,6 @@ public static class ReportWriter
         .cdbox .cdl{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
         .cdbox .cd{font:700 18px "Segoe UI",system-ui,sans-serif;color:var(--ink2)}
         .cd{font-variant-numeric:tabular-nums}.cd.soon{color:#f0a04b}
-        .thour .ics{margin-left:8px;font-weight:600;color:inherit}
         .ctable:not(.mini){table-layout:fixed;width:100%}
         .ctable:not(.mini) th:nth-child(1){width:38%}
         .ctable:not(.mini) th:nth-child(2){width:16%}
@@ -1046,7 +1045,7 @@ public static class ReportWriter
     /// <summary>
     /// The Treasure Hour banner: drawn by the page script from the schedule, against the clock of the PC, so that it
     /// switches by itself when an hour starts or ends ("live now, until 22:00 · ends in 37m" / "next one: Saturday
-    /// 20:00 · in 2d 4h", with a calendar file to download). Times follow the settings (local time or UTC, 12 or 24 h).
+    /// 20:00 · in 2d 4h"). Times follow the settings (local time or UTC, 12 or 24 h).
     /// The same script draws every countdown of the page (<see cref="Countdown"/>) each second.
     /// </summary>
     private static string TreasureHourBanner()
@@ -1071,8 +1070,6 @@ public static class ReportWriter
             next = L.T("Prochaine heure du trésor : {0}", "Next Treasure Hour: {0}", "Próxima hora del tesoro: {0}"),
             endsIn = L.T("se termine dans {0}", "ends in {0}", "termina en {0}"),
             startsIn = L.T("dans {0}", "in {0}", "en {0}"),
-            calendar = L.T("Ajouter au calendrier", "Add to calendar", "Añadir al calendario"),
-            calendarTitle = L.T("Heure du trésor Fortnite", "Fortnite Treasure Hour", "Hora del tesoro de Fortnite"),
             expected = L.T("prévue, pas encore annoncée", "expected, not announced yet", "prevista, aún no anunciada"),
             perChest = L.T("1 sur {0} par coffre", "1 in {0} per chest", "1 entre {0} por cofre"),
             oneIn = L.T("1 sur {0}", "1 in {0}", "1 entre {0}"),
@@ -1096,11 +1093,10 @@ public static class ReportWriter
             function iso(ms){return new Date(ms).toISOString().slice(0,19)+'Z'}
             function cd(ms){return '<span class="cd" data-end="'+iso(ms)+'"></span>'}
             function boosts(h,live){return Object.keys(h.b).map(function(k){return '<span><b>'+d.names[k]+' ×'+h.b[k].toLocaleString(d.text.locale)+'</b>'+(live?' · '+d.text.perChest.replace('{0}',f(d.odds[k]/h.b[k])):'')+'</span>'}).join('')}
-            function cal(h){return ' <a href="#" class="ics" data-s="'+h.s+'" data-e="'+h.e+'">'+d.text.calendar+'</a>'}
             function draw(){
               var now=Date.now(),cur=d.hours.filter(function(h){return now>=h.s&&now<h.e})[0],nxt=d.hours.filter(function(h){return h.s>now}).sort(function(a,b){return a.s-b.s})[0];
               if(cur){el.className='thour live';el.innerHTML='<div class="tt">⚡ '+d.text.live.replace('{0}',t(cur.e,false))+' · '+d.text.endsIn.replace('{0}',cd(cur.e))+'</div><div class="tb">'+boosts(cur,true)+'</div>';el.hidden=false}
-              else if(nxt){el.className='thour';el.innerHTML='<div class="tt">'+d.text.next.replace('{0}',t(nxt.s,true))+' · '+d.text.startsIn.replace('{0}',cd(nxt.s))+(nxt.c?'':' <span class="exp">('+d.text.expected+')</span>')+cal(nxt)+'</div><div class="tb">'+boosts(nxt,false)+'</div>';el.hidden=false}
+              else if(nxt){el.className='thour';el.innerHTML='<div class="tt">'+d.text.next.replace('{0}',t(nxt.s,true))+' · '+d.text.startsIn.replace('{0}',cd(nxt.s))+(nxt.c?'':' <span class="exp">('+d.text.expected+')</span>')+'</div><div class="tb">'+boosts(nxt,false)+'</div>';el.hidden=false}
               else el.hidden=true;
               boost(cur);tick();
             }
@@ -1131,18 +1127,6 @@ public static class ReportWriter
                 x.classList.toggle('soon',ms<86400000);
               });
             }
-            // "Add to calendar": a small .ics file for the next Treasure Hour (no account, works with any calendar app).
-            document.addEventListener('click',function(e){
-              var a=e.target.closest&&e.target.closest('a.ics');if(!a)return;e.preventDefault();
-              function z(ms){return iso(+ms).replace(/[-:]/g,'')}
-              var h=d.hours.filter(function(x){return String(x.s)===a.getAttribute('data-s')})[0];
-              var desc=h?Object.keys(h.b).map(function(k){return d.names[k]+' x'+h.b[k]}).join(', '):'';
-              var ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Chest Counter//Treasure Hour//EN','BEGIN:VEVENT','UID:treasure-hour-'+a.getAttribute('data-s')+'@chestcounter',
-                'DTSTAMP:'+z(Date.now()),'DTSTART:'+z(a.getAttribute('data-s')),'DTEND:'+z(a.getAttribute('data-e')),'SUMMARY:'+d.text.calendarTitle,'DESCRIPTION:'+desc,
-                'BEGIN:VALARM','TRIGGER:-PT10M','ACTION:DISPLAY','DESCRIPTION:'+d.text.calendarTitle,'END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n');
-              var link=document.createElement('a');link.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));link.download='treasure-hour.ics';
-              document.body.appendChild(link);link.click();setTimeout(function(){URL.revokeObjectURL(link.href);link.remove()},1000);
-            });
             draw();document.addEventListener('DOMContentLoaded',draw);setInterval(draw,30000);setInterval(tick,1000);
             })();</script>
             """;
