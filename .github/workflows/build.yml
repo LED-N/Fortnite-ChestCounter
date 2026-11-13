@@ -16,13 +16,25 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Publish
         run: dotnet publish src/ChestCounter/ChestCounter.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o dist
+      - name: Generate SHA-256 checksum
+        shell: pwsh
+        run: |
+          $exe = 'dist/ChestCounter.exe'
+          $hash = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -LiteralPath "$exe.sha256" -Value "$hash  ChestCounter.exe`n" -Encoding ascii -NoNewline
       - uses: actions/upload-artifact@v4
         with:
           name: ChestCounter
-          path: dist/ChestCounter.exe
+          path: |
+            dist/ChestCounter.exe
+            dist/ChestCounter.exe.sha256
+          if-no-files-found: error
       - name: Attach to the release (tags only)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/ChestCounter.exe
+          files: |
+            dist/ChestCounter.exe
+            dist/ChestCounter.exe.sha256
+          fail_on_unmatched_files: true
           body_path: RELEASE_NOTES.md
