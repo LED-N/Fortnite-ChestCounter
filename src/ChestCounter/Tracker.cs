@@ -571,6 +571,10 @@ public sealed class Tracker
         }
 
         var hadData = _data.Matches.Count > 0;
+        if (_data.AnalyzerVersion < 18)
+        {
+            ForgetGuessedTreasureNames(_data);
+        }
         foreach (var key in _data.ProcessedFiles.Where(kv => kv.Value != "skipped").Select(kv => kv.Key).ToList())
         {
             _data.ProcessedFiles.Remove(key);
@@ -578,6 +582,27 @@ public sealed class Tracker
         _data.AnalyzerVersion = ReplayAnalyzer.CurrentVersion;
         _store.SaveData(_data);
         return hadData;
+    }
+
+    /// <summary>
+    /// Version 18: a treasure with no golden chest is no longer named after an item the player held afterwards (it can
+    /// be a gizmo already owned, from the gizmo wheel). Replays still on disk are analyzed again; for those already deleted by Fortnite,
+    /// the name saved by an older version is dropped here, in the same form the analysis now gives ("Treasure
+    /// (unknown type)"). Golden chest prizes and imported treasures keep their names.
+    /// </summary>
+    private static void ForgetGuessedTreasureNames(TrackerData data)
+    {
+        foreach (var m in data.Matches.Where(m => m.AnalyzerVersion < 18))
+        {
+            foreach (var f in m.TreasureFinds.Where(f => f.FromPrizeHandler && !f.FromGoldenChest && f.RawItem.StartsWith("WID_", StringComparison.Ordinal)))
+            {
+                var start = DateTime.SpecifyKind(m.MatchStartUtc ?? m.AnalyzedAtUtc, DateTimeKind.Utc).ToLocalTime();
+                var t = f.ObtainedAtSeconds ?? 0;
+                f.Item = TreasureNames.UnknownFr;
+                f.RawItem = "GA_TreasureHandler";
+                f.PrizeId = $"{TreasureNames.UnknownPrefix}{start:yyyy-MM-dd_HH.mm}@{(int)t / 60}m{(int)t % 60:00}s";
+            }
+        }
     }
 
     private void PrintMatch(MatchRecord m, bool updated)
