@@ -41,9 +41,17 @@ Como Fortnite solo escribe la clave de descifrado de la repetición al terminar 
 ## Para empezar
 
 1. Descarga **[`ChestCounter.exe`](../../releases/latest)**. Este único archivo es todo lo que necesitas.
+
+   Si la versión incluye `ChestCounter.exe.sha256`, puedes verificar la descarga. Ejecuta este comando en PowerShell desde la carpeta de descarga.
+
+   ```powershell
+   Get-FileHash -LiteralPath .\ChestCounter.exe -Algorithm SHA256
+   ```
+
+   Compara el valor `Hash` con el primer valor de `ChestCounter.exe.sha256` de la misma versión, sin distinguir entre mayúsculas y minúsculas.
 2. Activa las repeticiones en Fortnite (ver arriba).
 3. Ejecuta `ChestCounter.exe`.
-   > Windows puede mostrar «Windows protegió tu PC» porque el exe no está firmado. Haz clic en *Más información → Ejecutar de todas formas*.
+   > El Control inteligente de aplicaciones de Windows puede seguir bloqueando un ejecutable sin firma. Si las sumas coinciden, tu archivo es idéntico al de la versión publicada.
 4. Se abre la ventana del contador. Ninguna pregunta: la tarjeta **Bienvenido** ajusta los tres puntos importantes (siguen en **Ajustes**), y las repeticiones que ya están en tu PC se cuentan enseguida.
 
 <p align="center"><img src="docs/welcome-es.png" alt="Primer inicio: la tarjeta de bienvenida" width="820"></p>

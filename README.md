@@ -41,9 +41,17 @@ Because Fortnite only writes the replay's decryption key when the match ends, ch
 ## Getting started
 
 1. Download **[`ChestCounter.exe`](../../releases/latest)**. This single file is all you need.
+
+   If the release includes `ChestCounter.exe.sha256`, you can verify the download. Run this command in PowerShell from the download folder.
+
+   ```powershell
+   Get-FileHash -LiteralPath .\ChestCounter.exe -Algorithm SHA256
+   ```
+
+   Compare the `Hash` value with the first value in `ChestCounter.exe.sha256` from the same release, ignoring letter case.
 2. Turn on replays in Fortnite (see above).
 3. Run `ChestCounter.exe`.
-   > Windows may show *"Windows protected your PC"* because the exe is not signed. Click *More info → Run anyway*.
+   > Windows Smart App Control may still block an unsigned executable. A matching checksum confirms that your file matches the release.
 4. The counter's window opens. No questions to answer: the **Welcome** card sets the three things that matter (they stay in **Settings**), and the replays already on your PC are counted right away.
 
 <p align="center"><img src="docs/welcome-en.png" alt="First launch: the welcome card" width="820"></p>
