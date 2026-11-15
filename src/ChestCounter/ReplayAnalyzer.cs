@@ -107,6 +107,12 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
 
     private readonly Dictionary<uint, string> _channelKey = new();
     private readonly Dictionary<uint, string> _channelLabel = new();
+
+    /// <summary>
+    /// Class of every actor seen (actor netguid -> label, e.g. "B_Athena_BuriedChest_Chest_C"). Actors spawned during
+    /// the match (buried chests, relic chests) have no path name: this is how a golden chest's SourceContainer is named.
+    /// </summary>
+    private readonly Dictionary<uint, string> _actorLabel = new();
     private readonly Dictionary<uint, uint> _lastSearcher = new();
     private readonly HashSet<string> _searched = new();
     private readonly List<SearchEvent> _searches = new();
@@ -211,7 +217,7 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
     private readonly List<GrantEvent> _grants = new();
 
     /// <summary>Bump when the analysis changes so that existing replays are re-analyzed.</summary>
-    public const int CurrentVersion = 17; // 17 (1.5.1): closed chests broken without an instigator counted again
+    public const int CurrentVersion = 18; // 18: no treasure name guessed from an item held afterwards; source of spawned chests
 
     private static readonly bool ProbeDebug = Environment.GetEnvironmentVariable("CHESTCOUNTER_DEBUG") == "4";
 
@@ -409,6 +415,16 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
 
     internal static float Now => Unreal.Core.ReplayReader<FortniteReplay>.CurrentTime;
 
+    /// <summary>
+    /// The chest a golden chest came from: its path for a chest placed on the map, else the class of the actor seen
+    /// in range (a buried chest is spawned when it is dug out, so it has no path).
+    /// </summary>
+    private string ContainerName(uint? guid)
+    {
+        var path = PathOf(guid);
+        return path.Length > 0 || guid is not uint id ? path : _actorLabel.GetValueOrDefault(id, "");
+    }
+
     private string PathOf(uint? guid)
     {
         if (guid is null || guid == 0)
@@ -476,6 +492,10 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
             _channelKey[channelIndex] = $"guid:{channel?.ActorId}";
         }
         _channelLabel[channelIndex] = label;
+        if (channel?.ActorId is uint actorId && actorId != 0 && !string.IsNullOrEmpty(label))
+        {
+            _actorLabel[actorId] = label;
+        }
         _channelOpenAt[channelIndex] = Now;
         _channelSearched.Remove(channelIndex);
         _lastSearcher.Remove(channelIndex);
@@ -612,7 +632,7 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
                 var prizeId = ReadPrizeId(prize.PrizeTemplateId);
                 if (prizeId != null && prize.bSuccess != false && _prizeChannelsSeen.Add(channelIndex))
                 {
-                    _prizes.Add(new PrizeEvent(Now, prizeId, prize.OpeningPawn ?? prize.Instigator, PathOf(prize.SourceContainer)));
+                    _prizes.Add(new PrizeEvent(Now, prizeId, prize.OpeningPawn ?? prize.Instigator, ContainerName(prize.SourceContainer)));
                 }
                 break;
 
@@ -900,10 +920,10 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
             });
         }
 
-        // 2) Items seen in the target's hands are NOT counted on their own (they can come from a teammate,
-        //    since treasures are shared by team, or from elsewhere). They are only used to name a treasure below.
-        //    Event loot that only looks like a treasure is left out.
-        var equippedByMe = _equips.Where(e => targetPawns.Contains(e.Pawn) && !EventItem.IsMatch(e.Item)).OrderBy(e => e.Time).ToList();
+        // 2) Items seen in the target's hands are NOT counted, and do not name a treasure either: an item in hand can
+        //    come from anywhere (a gizmo the player already owns, pulled out of the gizmo wheel by holding the pickaxe
+        //    slot, like a portable extractor), so "the item held afterwards" is a guess that can be wrong. A treasure
+        //    with no golden chest is named only by an item sent at that exact moment.
 
         // 3) An item thrown out of a container as a pickup is never a treasure: treasure hunt items go straight into
         //    the inventory and grant a prize handler (4). The only such pickups seen are "happy hour" event extractors
@@ -927,7 +947,6 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
         for (var hi = 0; hi < handlerTimes.Count; hi++)
         {
             var h = handlerTimes[hi];
-            var nextHandler = hi + 1 < handlerTimes.Count ? handlerTimes[hi + 1] : float.MaxValue;
             // Buried chests grant the prize when the dig completes, ~2.5s before the chest reports "searched": allow
             // up to +4s for them only.
             var closest = _searches
@@ -945,17 +964,8 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
             {
                 var kind = ChestKinds.Classify(closest!.Label);
 
-                // Item identity: an item first sent at that exact moment, otherwise the only treasure item the
-                // target later had in hand (if there is exactly one kind).
+                // Item identity: an item first sent at that exact moment, else unknown (see 2).
                 var item = _firstExport.Where(kv => kv.Key.StartsWith("WID_") && !EventItem.IsMatch(kv.Key) && Math.Abs(kv.Value - h) <= 1).Select(kv => kv.Key).FirstOrDefault();
-                if (item == null)
-                {
-                    var later = equippedByMe.Where(e => e.Time >= h && e.Time < nextHandler).Select(e => TreasureNames.Friendly(e.Item)).Where(n => !n.StartsWith("B_")).Distinct().ToList();
-                    if (later.Count == 1)
-                    {
-                        item = equippedByMe.First(e => e.Time >= h && e.Time < nextHandler && TreasureNames.Friendly(e.Item) == later[0]).Item;
-                    }
-                }
                 var itemName = item != null ? TreasureNames.Friendly(item) : null;
 
                 // No id in the replay: a unique key per treasure (shown as a treasure gizmo).
