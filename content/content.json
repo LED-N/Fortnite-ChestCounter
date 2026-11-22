@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "revision": 3,
-  "updated": "2026-11-15",
+  "revision": 4,
+  "updated": "2026-11-22",
   "about": "Treasure hunt data shown by Chest Counter (report, odds, collection). Edit it on main and raise 'revision': every counter picks it up at its next start. Schema in src/ChestCounter/TreasureCatalog.cs.",
   "sources": {
     "odds": "https://x.com/FortniteStatus/status/2119202610322227327",
@@ -222,7 +222,8 @@
         {
           "id": "w4-outfit",
           "kind": "outfit",
-          "name": "Week 4 Gold Outfit",
+          "name": "Solid Gold Kasane Teto",
+          "image": "https://cdn.fortnite.bot/s43treasure/w4-outfit.webp",
           "prizeIds": [
             "DelilahPrize:dpid_item24"
           ]
@@ -230,7 +231,8 @@
         {
           "id": "w4-pickaxe",
           "kind": "pickaxe",
-          "name": "Week 4 Pickaxe or Back Bling",
+          "name": "Solid Gold High Tide and Wavecutter",
+          "image": "https://cdn.fortnite.bot/s43treasure/w4-backbling.webp",
           "prizeIds": [
             "DelilahPrize:dpid_item25"
           ]
@@ -238,7 +240,8 @@
         {
           "id": "w4-jam",
           "kind": "jam",
-          "name": "Week 4 Jam Track",
+          "name": "Wellerman",
+          "image": "https://cdn.fortnite.bot/s43treasure/w4-jamtrack.webp",
           "prizeIds": [
             "DelilahPrize:dpid_item26"
           ]
@@ -246,7 +249,8 @@
         {
           "id": "w4-loading",
           "kind": "loading",
-          "name": "Week 4 Loading Screen",
+          "name": "Oscar's Wraps",
+          "image": "https://cdn.fortnite.bot/s43treasure/w4-loading.webp",
           "prizeIds": [
             "DelilahPrize:dpid_item27"
           ]
@@ -254,7 +258,8 @@
         {
           "id": "w4-car",
           "kind": "car",
-          "name": "Week 4 Vehicle & Decal",
+          "name": "Gold Lamborghini Urus SE Decal",
+          "image": "https://cdn.fortnite.bot/s43treasure/w4-car.webp",
           "prizeIds": [
             "DelilahPrize:dpid_item28"
           ]
