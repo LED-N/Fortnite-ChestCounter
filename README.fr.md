@@ -41,9 +41,17 @@ Comme Fortnite n'écrit la clé de déchiffrement du replay qu'à la fin de la p
 ## Démarrer
 
 1. Télécharge **[`ChestCounter.exe`](../../releases/latest)**. Ce seul fichier suffit.
+
+   Si la release contient `ChestCounter.exe.sha256`, tu peux vérifier le téléchargement. Exécute cette commande dans PowerShell depuis le dossier de téléchargement.
+
+   ```powershell
+   Get-FileHash -LiteralPath .\ChestCounter.exe -Algorithm SHA256
+   ```
+
+   Compare la valeur `Hash` à la première valeur de `ChestCounter.exe.sha256` de la même release, sans tenir compte des majuscules et des minuscules.
 2. Active les rediffusions dans Fortnite (voir ci-dessus).
 3. Lance `ChestCounter.exe`.
-   > Windows peut afficher « Windows a protégé votre ordinateur » car l'exe n'est pas signé. Clique sur *Informations complémentaires → Exécuter quand même*.
+   > Le contrôle intelligent des applications de Windows peut toujours bloquer un exécutable non signé. Si les empreintes correspondent, ton fichier est identique à celui de la release.
 4. La fenêtre du compteur s'ouvre. Aucune question : la carte **Bienvenue** règle les trois points importants (ils restent dans **Réglages**), et les replays déjà présents sur ton PC sont comptés tout de suite.
 
 <p align="center"><img src="docs/welcome-fr.png" alt="Premier lancement : la carte de bienvenue" width="820"></p>
